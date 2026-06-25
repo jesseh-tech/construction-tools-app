@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { EstimateProvider } from "./EstimateProvider";
+import { ProjectProvider } from "./ProjectProvider";
 import { AssistantWidget } from "./AssistantWidget";
 
 const geistSans = Geist({
@@ -38,10 +38,10 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-full flex flex-col bg-[#e7e5df] text-gray-900">
-        <EstimateProvider>
+        <ProjectProvider>
           {children}
           <AssistantWidget />
-        </EstimateProvider>
+        </ProjectProvider>
       </body>
     </html>
   );

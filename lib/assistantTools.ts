@@ -1,38 +1,28 @@
-// Server-only: the tools the assistant can call to edit an estimate, plus the
-// executor that applies a tool call and returns the new estimate.
+// Server-only: the tools the assistant can call to edit the shared job, plus the
+// executor that applies a tool call and returns the new job.
 import type Anthropic from "@anthropic-ai/sdk";
 import { randomUUID } from "node:crypto";
-import {
-  type Estimate,
-  type Division,
-  type LineItem,
-  UNITS,
-  CSI_CATALOG,
-  csiName,
-} from "./estimate";
+import { type Job, type Division, type LineItem, UNITS, CSI_CATALOG, csiName } from "./store";
 
 const unitList = UNITS.join(", ");
-const csiList = CSI_CATALOG.map(([c, n]) => `${c} ${n}`).join("; ");
+const csiList = CSI_CATALOG.map(([c, name]) => `${c} ${name}`).join("; ");
 
 export const tools: Anthropic.Tool[] = [
   {
     name: "add_line_item",
     description:
-      "Add a line item to the estimate (e.g. '400 sq ft of drywall'). Costs are PER UNIT and split across material/labor/equipment/sub. Put the cost in whichever bucket fits; if the user gives one price and no breakdown, put it in material_cost for supplied materials or sub_cost for subcontracted scopes, and say it's an estimate to confirm. If the division code isn't on the estimate yet, it will be created automatically.",
+      "Add a line item to the estimate (e.g. '400 sq ft of drywall'). Costs are PER UNIT, split across material/labor/equipment/sub. Put the cost in whichever bucket fits; if the user gives one price and no breakdown, use material for supplied goods, sub for subcontracted scopes, labor for install — and note it's an estimate to confirm. If the division code isn't present yet it is created automatically.",
     input_schema: {
       type: "object",
       properties: {
-        division_code: {
-          type: "string",
-          description: `Two-digit CSI division code the item belongs under. Choose from: ${csiList}`,
-        },
-        description: { type: "string", description: "Short description of the material or work." },
+        division_code: { type: "string", description: `Two-digit CSI division code. Choose from: ${csiList}` },
+        description: { type: "string" },
         quantity: { type: "number" },
         unit: { type: "string", description: `Unit of measure: ${unitList}` },
-        material_cost: { type: "number", description: "Material cost per unit ($)." },
-        labor_cost: { type: "number", description: "Labor cost per unit ($)." },
-        equipment_cost: { type: "number", description: "Equipment cost per unit ($)." },
-        sub_cost: { type: "number", description: "Subcontractor cost per unit ($)." },
+        material_cost: { type: "number", description: "Material $/unit." },
+        labor_cost: { type: "number", description: "Labor $/unit." },
+        equipment_cost: { type: "number", description: "Equipment $/unit." },
+        sub_cost: { type: "number", description: "Subcontractor $/unit." },
       },
       required: ["division_code", "description", "quantity", "unit"],
       additionalProperties: false,
@@ -40,7 +30,7 @@ export const tools: Anthropic.Tool[] = [
   },
   {
     name: "update_line_item",
-    description: "Update fields on an existing line item by its id. Include only the fields to change.",
+    description: "Update fields on an existing line item by its id. Include only fields to change.",
     input_schema: {
       type: "object",
       properties: {
@@ -59,45 +49,29 @@ export const tools: Anthropic.Tool[] = [
   {
     name: "remove_line_item",
     description: "Remove a line item by its id.",
-    input_schema: {
-      type: "object",
-      properties: { id: { type: "string" } },
-      required: ["id"],
-      additionalProperties: false,
-    },
+    input_schema: { type: "object", properties: { id: { type: "string" } }, required: ["id"], additionalProperties: false },
   },
   {
     name: "add_division",
-    description: "Add a CSI division to the estimate if it isn't already present.",
+    description: "Add a CSI division if not already present.",
     input_schema: {
       type: "object",
-      properties: {
-        code: { type: "string", description: "Two-digit CSI code." },
-        name: { type: "string", description: "Optional name; defaults to the standard CSI name." },
-      },
+      properties: { code: { type: "string" }, name: { type: "string" } },
       required: ["code"],
     },
   },
   {
     name: "remove_division",
-    description: "Remove a division (and all its line items) by its code.",
-    input_schema: {
-      type: "object",
-      properties: { code: { type: "string" } },
-      required: ["code"],
-      additionalProperties: false,
-    },
+    description: "Remove a division (and its line items) by code.",
+    input_schema: { type: "object", properties: { code: { type: "string" } }, required: ["code"], additionalProperties: false },
   },
   {
-    name: "set_project_field",
+    name: "set_meta_field",
     description: "Set a project header field.",
     input_schema: {
       type: "object",
       properties: {
-        field: {
-          type: "string",
-          enum: ["name", "client", "bidNo", "location", "sf", "dueLabel"],
-        },
+        field: { type: "string", enum: ["name", "client", "bidNo", "location", "sf", "dueLabel"] },
         value: { type: "string", description: "New value. For 'sf' pass the number as a string." },
       },
       required: ["field", "value"],
@@ -106,15 +80,26 @@ export const tools: Anthropic.Tool[] = [
   },
   {
     name: "set_markup",
-    description: "Set a bid build-up markup percentage.",
+    description: "Set a bid build-up markup percentage (insurance, overhead, contingency, profit).",
+    input_schema: {
+      type: "object",
+      properties: { field: { type: "string", enum: ["ins", "oh", "cont", "profit"] }, percent: { type: "number" } },
+      required: ["field", "percent"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "add_change_order",
+    description: "Log a change order. Status defaults to pending. Approved COs adjust the contract value.",
     input_schema: {
       type: "object",
       properties: {
-        field: { type: "string", enum: ["ins", "oh", "cont", "profit"] },
-        percent: { type: "number" },
+        description: { type: "string" },
+        amount: { type: "number" },
+        status: { type: "string", enum: ["pending", "approved", "rejected"] },
+        date: { type: "string", description: "ISO date YYYY-MM-DD; optional." },
       },
-      required: ["field", "percent"],
-      additionalProperties: false,
+      required: ["description", "amount"],
     },
   },
 ];
@@ -126,41 +111,42 @@ const num = (v: unknown, f = 0): number => {
 };
 const str = (v: unknown, f = ""): string => (v === undefined || v === null ? f : String(v));
 
-function clone(est: Estimate): Estimate {
+function clone(job: Job): Job {
   return {
-    project: { ...est.project },
-    markups: { ...est.markups },
-    divisions: est.divisions.map((d) => ({ ...d, items: d.items.map((i) => ({ ...i })) })),
+    meta: { ...job.meta },
+    markups: { ...job.markups },
+    divisions: job.divisions.map((d) => ({ ...d, items: d.items.map((i) => ({ ...i })) })),
+    changeOrders: job.changeOrders.map((c) => ({ ...c })),
+    billing: { retainage: job.billing.retainage, pct: { ...job.billing.pct } },
+    payapp: { ...job.payapp },
+    rfis: [...job.rfis],
+    submittals: [...job.submittals],
+    dailyReports: [...job.dailyReports],
   };
 }
 
-function ensureDivision(est: Estimate, code: string, name?: string): Division {
-  let d = est.divisions.find((x) => x.code === code);
-  if (d) return d;
-  d = { id: randomUUID(), code, name: name || csiName(code), collapsed: false, items: [] };
-  est.divisions.push(d);
-  est.divisions.sort((a, b) => (parseInt(a.code, 10) || 0) - (parseInt(b.code, 10) || 0));
+function ensureDivision(job: Job, code: string, name?: string): Division {
+  const found = job.divisions.find((x) => x.code === code);
+  if (found) return found;
+  const d: Division = { id: randomUUID(), code, name: name || csiName(code), collapsed: false, items: [] };
+  job.divisions.push(d);
+  job.divisions.sort((a, b) => (parseInt(a.code, 10) || 0) - (parseInt(b.code, 10) || 0));
   return d;
 }
 
-function findItem(est: Estimate, id: string): { div: Division; item: LineItem } | null {
-  for (const div of est.divisions) {
+function findItem(job: Job, id: string): { div: Division; item: LineItem } | null {
+  for (const div of job.divisions) {
     const item = div.items.find((i) => i.id === id);
     if (item) return { div, item };
   }
   return null;
 }
 
-export function applyToolUse(
-  estimate: Estimate,
-  name: string,
-  input: ToolInput,
-): { estimate: Estimate; result: string } {
-  const est = clone(estimate);
-
+export function applyToolUse(job: Job, name: string, input: ToolInput): { job: Job; result: string } {
+  const j = clone(job);
   switch (name) {
     case "add_line_item": {
-      const div = ensureDivision(est, str(input.division_code));
+      const div = ensureDivision(j, str(input.division_code));
       const li: LineItem = {
         id: randomUUID(),
         desc: str(input.description),
@@ -172,14 +158,11 @@ export function applyToolUse(
         s: num(input.sub_cost),
       };
       div.items.push(li);
-      return {
-        estimate: est,
-        result: `Added "${li.desc}" (${li.qty} ${li.unit}) to Div ${div.code} ${div.name}. id: ${li.id}`,
-      };
+      return { job: j, result: `Added "${li.desc}" (${li.qty} ${li.unit}) to Div ${div.code} ${div.name}. id: ${li.id}` };
     }
     case "update_line_item": {
-      const found = findItem(est, str(input.id));
-      if (!found) return { estimate: est, result: `No line item with id ${str(input.id)}.` };
+      const found = findItem(j, str(input.id));
+      if (!found) return { job: j, result: `No line item with id ${str(input.id)}.` };
       const { item } = found;
       if (input.description !== undefined) item.desc = str(input.description);
       if (input.quantity !== undefined) item.qty = num(input.quantity, item.qty);
@@ -188,50 +171,54 @@ export function applyToolUse(
       if (input.labor_cost !== undefined) item.l = num(input.labor_cost, item.l);
       if (input.equipment_cost !== undefined) item.e = num(input.equipment_cost, item.e);
       if (input.sub_cost !== undefined) item.s = num(input.sub_cost, item.s);
-      return { estimate: est, result: `Updated line item ${item.id}.` };
+      return { job: j, result: `Updated line item ${item.id}.` };
     }
     case "remove_line_item": {
-      const found = findItem(est, str(input.id));
-      if (!found) return { estimate: est, result: `No line item with id ${str(input.id)}.` };
+      const found = findItem(j, str(input.id));
+      if (!found) return { job: j, result: `No line item with id ${str(input.id)}.` };
       found.div.items = found.div.items.filter((i) => i.id !== input.id);
-      return { estimate: est, result: `Removed line item ${str(input.id)}.` };
+      return { job: j, result: `Removed line item ${str(input.id)}.` };
     }
     case "add_division": {
-      const before = est.divisions.length;
-      const d = ensureDivision(est, str(input.code), input.name ? str(input.name) : undefined);
-      return {
-        estimate: est,
-        result:
-          est.divisions.length === before
-            ? `Division ${d.code} already present.`
-            : `Added Div ${d.code} ${d.name}.`,
-      };
+      const before = j.divisions.length;
+      const d = ensureDivision(j, str(input.code), input.name ? str(input.name) : undefined);
+      return { job: j, result: j.divisions.length === before ? `Division ${d.code} already present.` : `Added Div ${d.code} ${d.name}.` };
     }
     case "remove_division": {
       const code = str(input.code);
-      const before = est.divisions.length;
-      est.divisions = est.divisions.filter((d) => d.code !== code);
-      return {
-        estimate: est,
-        result: before === est.divisions.length ? `No division with code ${code}.` : `Removed Div ${code}.`,
-      };
+      const before = j.divisions.length;
+      j.divisions = j.divisions.filter((d) => d.code !== code);
+      return { job: j, result: before === j.divisions.length ? `No division ${code}.` : `Removed Div ${code}.` };
     }
-    case "set_project_field": {
+    case "set_meta_field": {
       const field = str(input.field);
-      if (field === "sf") est.project.sf = num(input.value);
-      else if (["name", "client", "bidNo", "location", "dueLabel"].includes(field)) {
-        (est.project as unknown as Record<string, string>)[field] = str(input.value);
-      } else return { estimate: est, result: `Unknown project field ${field}.` };
-      return { estimate: est, result: `Set project ${field}.` };
+      if (field === "sf") j.meta.sf = num(input.value);
+      else if (["name", "client", "bidNo", "location", "dueLabel"].includes(field))
+        (j.meta as unknown as Record<string, string>)[field] = str(input.value);
+      else return { job: j, result: `Unknown field ${field}.` };
+      return { job: j, result: `Set ${field}.` };
     }
     case "set_markup": {
-      const field = str(input.field) as keyof Estimate["markups"];
-      if (!["ins", "oh", "cont", "profit"].includes(field))
-        return { estimate: est, result: `Unknown markup ${field}.` };
-      est.markups[field] = num(input.percent, est.markups[field]);
-      return { estimate: est, result: `Set ${field} markup to ${est.markups[field]}%.` };
+      const field = str(input.field) as keyof Job["markups"];
+      if (!["ins", "oh", "cont", "profit"].includes(field)) return { job: j, result: `Unknown markup ${field}.` };
+      j.markups[field] = num(input.percent, j.markups[field]);
+      return { job: j, result: `Set ${field} markup to ${j.markups[field]}%.` };
+    }
+    case "add_change_order": {
+      const n = j.changeOrders.length + 1;
+      j.changeOrders.push({
+        id: randomUUID(),
+        no: `CO-${String(n).padStart(3, "0")}`,
+        date: str(input.date) || new Date().toISOString().slice(0, 10),
+        desc: str(input.description),
+        status: (["pending", "approved", "rejected"].includes(str(input.status)) ? str(input.status) : "pending") as ChangeOrderStatus,
+        amount: num(input.amount),
+      });
+      return { job: j, result: `Logged change order for ${str(input.description)}.` };
     }
     default:
-      return { estimate: est, result: `Unknown tool: ${name}.` };
+      return { job: j, result: `Unknown tool: ${name}.` };
   }
 }
+
+type ChangeOrderStatus = "pending" | "approved" | "rejected";

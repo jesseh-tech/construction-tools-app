@@ -1,12 +1,12 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { useEstimate } from "./EstimateProvider";
+import { useProject } from "./ProjectProvider";
 
 type Message = { role: "user" | "assistant"; content: string };
 
 export function AssistantWidget() {
-  const { estimate, setEstimate } = useEstimate();
+  const { job, setJob } = useProject();
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -37,14 +37,14 @@ export function AssistantWidget() {
         body: JSON.stringify({
           // Only the real back-and-forth — skip the canned greeting.
           messages: next.slice(1),
-          estimate,
+          job,
         }),
       });
       const data = await res.json();
       if (!res.ok) {
         setMessages((m) => [...m, { role: "assistant", content: data.error ?? "Something went wrong." }]);
       } else {
-        if (data.estimate) setEstimate(data.estimate);
+        if (data.job) setJob(data.job);
         setMessages((m) => [...m, { role: "assistant", content: data.reply || "Done." }]);
       }
     } catch {
