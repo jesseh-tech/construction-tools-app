@@ -1,148 +1,237 @@
 // Server-only: the tools the assistant can call to edit an estimate, plus the
-// executor that applies a tool call to an estimate and returns the new estimate.
+// executor that applies a tool call and returns the new estimate.
 import type Anthropic from "@anthropic-ai/sdk";
 import { randomUUID } from "node:crypto";
-import { type Estimate, type LineItem, CSI_DIVISIONS } from "./estimate";
+import {
+  type Estimate,
+  type Division,
+  type LineItem,
+  UNITS,
+  CSI_CATALOG,
+  csiName,
+} from "./estimate";
+
+const unitList = UNITS.join(", ");
+const csiList = CSI_CATALOG.map(([c, n]) => `${c} ${n}`).join("; ");
 
 export const tools: Anthropic.Tool[] = [
   {
     name: "add_line_item",
     description:
-      "Add a new line item to the estimate. Use this whenever the user describes a material, quantity, or scope of work to price out (e.g. '400 sq ft of drywall').",
+      "Add a line item to the estimate (e.g. '400 sq ft of drywall'). Costs are PER UNIT and split across material/labor/equipment/sub. Put the cost in whichever bucket fits; if the user gives one price and no breakdown, put it in material_cost for supplied materials or sub_cost for subcontracted scopes, and say it's an estimate to confirm. If the division code isn't on the estimate yet, it will be created automatically.",
     input_schema: {
       type: "object",
       properties: {
-        division: {
+        division_code: {
           type: "string",
-          description: `The CSI division this item belongs to. Choose the best fit from: ${CSI_DIVISIONS.join("; ")}`,
+          description: `Two-digit CSI division code the item belongs under. Choose from: ${csiList}`,
         },
-        description: {
-          type: "string",
-          description:
-            "Short description of the material or work, e.g. '5/8\" drywall — hung, taped, and finished'.",
-        },
-        quantity: { type: "number", description: "The quantity, as a number." },
-        unit: {
-          type: "string",
-          description:
-            "Unit of measure: SF (square feet), LF (linear feet), EA (each), CY (cubic yards), SY (square yards), TON, HR (hours), or LS (lump sum).",
-        },
-        unit_price: {
-          type: "number",
-          description:
-            "Price per unit in US dollars. If the user did not give a price, use a reasonable current industry estimate and tell them it is an estimate they should confirm.",
-        },
+        description: { type: "string", description: "Short description of the material or work." },
+        quantity: { type: "number" },
+        unit: { type: "string", description: `Unit of measure: ${unitList}` },
+        material_cost: { type: "number", description: "Material cost per unit ($)." },
+        labor_cost: { type: "number", description: "Labor cost per unit ($)." },
+        equipment_cost: { type: "number", description: "Equipment cost per unit ($)." },
+        sub_cost: { type: "number", description: "Subcontractor cost per unit ($)." },
       },
-      required: ["division", "description", "quantity", "unit", "unit_price"],
+      required: ["division_code", "description", "quantity", "unit"],
       additionalProperties: false,
     },
   },
   {
     name: "update_line_item",
-    description:
-      "Update one or more fields on an existing line item, identified by its id. Only include the fields you want to change.",
+    description: "Update fields on an existing line item by its id. Include only the fields to change.",
     input_schema: {
       type: "object",
       properties: {
-        id: { type: "string", description: "The id of the line item to update." },
-        division: { type: "string" },
+        id: { type: "string" },
         description: { type: "string" },
         quantity: { type: "number" },
         unit: { type: "string" },
-        unit_price: { type: "number" },
+        material_cost: { type: "number" },
+        labor_cost: { type: "number" },
+        equipment_cost: { type: "number" },
+        sub_cost: { type: "number" },
       },
       required: ["id"],
     },
   },
   {
     name: "remove_line_item",
-    description: "Remove a line item from the estimate by its id.",
+    description: "Remove a line item by its id.",
     input_schema: {
       type: "object",
-      properties: {
-        id: { type: "string", description: "The id of the line item to remove." },
-      },
+      properties: { id: { type: "string" } },
       required: ["id"],
       additionalProperties: false,
     },
   },
   {
-    name: "set_project_name",
-    description: "Set or change the project name on the estimate.",
+    name: "add_division",
+    description: "Add a CSI division to the estimate if it isn't already present.",
     input_schema: {
       type: "object",
-      properties: { name: { type: "string" } },
-      required: ["name"],
+      properties: {
+        code: { type: "string", description: "Two-digit CSI code." },
+        name: { type: "string", description: "Optional name; defaults to the standard CSI name." },
+      },
+      required: ["code"],
+    },
+  },
+  {
+    name: "remove_division",
+    description: "Remove a division (and all its line items) by its code.",
+    input_schema: {
+      type: "object",
+      properties: { code: { type: "string" } },
+      required: ["code"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "set_project_field",
+    description: "Set a project header field.",
+    input_schema: {
+      type: "object",
+      properties: {
+        field: {
+          type: "string",
+          enum: ["name", "client", "bidNo", "location", "sf", "dueLabel"],
+        },
+        value: { type: "string", description: "New value. For 'sf' pass the number as a string." },
+      },
+      required: ["field", "value"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "set_markup",
+    description: "Set a bid build-up markup percentage.",
+    input_schema: {
+      type: "object",
+      properties: {
+        field: { type: "string", enum: ["ins", "oh", "cont", "profit"] },
+        percent: { type: "number" },
+      },
+      required: ["field", "percent"],
       additionalProperties: false,
     },
   },
 ];
 
 type ToolInput = Record<string, unknown>;
-
-const num = (v: unknown, fallback = 0): number => {
+const num = (v: unknown, f = 0): number => {
   const n = typeof v === "number" ? v : Number(v);
-  return Number.isFinite(n) ? n : fallback;
+  return Number.isFinite(n) ? n : f;
 };
-const str = (v: unknown, fallback = ""): string =>
-  v === undefined || v === null ? fallback : String(v);
+const str = (v: unknown, f = ""): string => (v === undefined || v === null ? f : String(v));
 
-// Applies a single tool call to the estimate, returning a NEW estimate object
-// plus a short human-readable result string fed back to the model.
+function clone(est: Estimate): Estimate {
+  return {
+    project: { ...est.project },
+    markups: { ...est.markups },
+    divisions: est.divisions.map((d) => ({ ...d, items: d.items.map((i) => ({ ...i })) })),
+  };
+}
+
+function ensureDivision(est: Estimate, code: string, name?: string): Division {
+  let d = est.divisions.find((x) => x.code === code);
+  if (d) return d;
+  d = { id: randomUUID(), code, name: name || csiName(code), collapsed: false, items: [] };
+  est.divisions.push(d);
+  est.divisions.sort((a, b) => (parseInt(a.code, 10) || 0) - (parseInt(b.code, 10) || 0));
+  return d;
+}
+
+function findItem(est: Estimate, id: string): { div: Division; item: LineItem } | null {
+  for (const div of est.divisions) {
+    const item = div.items.find((i) => i.id === id);
+    if (item) return { div, item };
+  }
+  return null;
+}
+
 export function applyToolUse(
   estimate: Estimate,
   name: string,
   input: ToolInput,
 ): { estimate: Estimate; result: string } {
-  const next: Estimate = {
-    projectName: estimate.projectName,
-    lineItems: [...estimate.lineItems],
-  };
+  const est = clone(estimate);
 
   switch (name) {
     case "add_line_item": {
+      const div = ensureDivision(est, str(input.division_code));
       const li: LineItem = {
         id: randomUUID(),
-        division: str(input.division),
-        description: str(input.description),
-        quantity: num(input.quantity),
-        unit: str(input.unit),
-        unitPrice: num(input.unit_price),
+        desc: str(input.description),
+        qty: num(input.quantity),
+        unit: str(input.unit, "EA"),
+        m: num(input.material_cost),
+        l: num(input.labor_cost),
+        e: num(input.equipment_cost),
+        s: num(input.sub_cost),
       };
-      next.lineItems.push(li);
+      div.items.push(li);
       return {
-        estimate: next,
-        result: `Added "${li.description}" — ${li.quantity} ${li.unit} @ $${li.unitPrice}/unit (id: ${li.id}).`,
+        estimate: est,
+        result: `Added "${li.desc}" (${li.qty} ${li.unit}) to Div ${div.code} ${div.name}. id: ${li.id}`,
       };
     }
     case "update_line_item": {
-      const idx = next.lineItems.findIndex((li) => li.id === input.id);
-      if (idx === -1) return { estimate: next, result: `No line item with id ${str(input.id)}.` };
-      const cur = { ...next.lineItems[idx] };
-      if (input.division !== undefined) cur.division = str(input.division);
-      if (input.description !== undefined) cur.description = str(input.description);
-      if (input.quantity !== undefined) cur.quantity = num(input.quantity, cur.quantity);
-      if (input.unit !== undefined) cur.unit = str(input.unit);
-      if (input.unit_price !== undefined) cur.unitPrice = num(input.unit_price, cur.unitPrice);
-      next.lineItems[idx] = cur;
-      return { estimate: next, result: `Updated line item ${cur.id}.` };
+      const found = findItem(est, str(input.id));
+      if (!found) return { estimate: est, result: `No line item with id ${str(input.id)}.` };
+      const { item } = found;
+      if (input.description !== undefined) item.desc = str(input.description);
+      if (input.quantity !== undefined) item.qty = num(input.quantity, item.qty);
+      if (input.unit !== undefined) item.unit = str(input.unit, item.unit);
+      if (input.material_cost !== undefined) item.m = num(input.material_cost, item.m);
+      if (input.labor_cost !== undefined) item.l = num(input.labor_cost, item.l);
+      if (input.equipment_cost !== undefined) item.e = num(input.equipment_cost, item.e);
+      if (input.sub_cost !== undefined) item.s = num(input.sub_cost, item.s);
+      return { estimate: est, result: `Updated line item ${item.id}.` };
     }
     case "remove_line_item": {
-      const before = next.lineItems.length;
-      next.lineItems = next.lineItems.filter((li) => li.id !== input.id);
+      const found = findItem(est, str(input.id));
+      if (!found) return { estimate: est, result: `No line item with id ${str(input.id)}.` };
+      found.div.items = found.div.items.filter((i) => i.id !== input.id);
+      return { estimate: est, result: `Removed line item ${str(input.id)}.` };
+    }
+    case "add_division": {
+      const before = est.divisions.length;
+      const d = ensureDivision(est, str(input.code), input.name ? str(input.name) : undefined);
       return {
-        estimate: next,
+        estimate: est,
         result:
-          before === next.lineItems.length
-            ? `No line item with id ${str(input.id)}.`
-            : `Removed line item ${str(input.id)}.`,
+          est.divisions.length === before
+            ? `Division ${d.code} already present.`
+            : `Added Div ${d.code} ${d.name}.`,
       };
     }
-    case "set_project_name": {
-      next.projectName = str(input.name);
-      return { estimate: next, result: `Project name set to "${next.projectName}".` };
+    case "remove_division": {
+      const code = str(input.code);
+      const before = est.divisions.length;
+      est.divisions = est.divisions.filter((d) => d.code !== code);
+      return {
+        estimate: est,
+        result: before === est.divisions.length ? `No division with code ${code}.` : `Removed Div ${code}.`,
+      };
+    }
+    case "set_project_field": {
+      const field = str(input.field);
+      if (field === "sf") est.project.sf = num(input.value);
+      else if (["name", "client", "bidNo", "location", "dueLabel"].includes(field)) {
+        (est.project as unknown as Record<string, string>)[field] = str(input.value);
+      } else return { estimate: est, result: `Unknown project field ${field}.` };
+      return { estimate: est, result: `Set project ${field}.` };
+    }
+    case "set_markup": {
+      const field = str(input.field) as keyof Estimate["markups"];
+      if (!["ins", "oh", "cont", "profit"].includes(field))
+        return { estimate: est, result: `Unknown markup ${field}.` };
+      est.markups[field] = num(input.percent, est.markups[field]);
+      return { estimate: est, result: `Set ${field} markup to ${est.markups[field]}%.` };
     }
     default:
-      return { estimate: next, result: `Unknown tool: ${name}.` };
+      return { estimate: est, result: `Unknown tool: ${name}.` };
   }
 }

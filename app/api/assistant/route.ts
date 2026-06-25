@@ -1,6 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse } from "next/server";
-import { type Estimate, emptyEstimate, estimateSubtotal, formatUSD } from "@/lib/estimate";
+import { type Estimate, emptyEstimate, estimateTotals, money } from "@/lib/estimate";
 import { tools, applyToolUse } from "@/lib/assistantTools";
 
 // The API key never reaches the browser — it lives only in this server route's
@@ -11,16 +11,18 @@ const MAX_TOOL_TURNS = 6;
 type ChatMessage = { role: "user" | "assistant"; content: string };
 
 function systemPrompt(estimate: Estimate): string {
+  const t = estimateTotals(estimate);
   return [
     "You are the in-app estimating assistant for 10 Cent Investments' construction tools.",
-    "You help the user build a construction cost estimate by editing it through the provided tools.",
-    "When the user mentions a material, quantity, or scope (e.g. '400 sq ft of drywall'), add or update the corresponding line item using the tools — do not just describe what to do.",
-    "Organize items by CSI division. If the user gives no price, use a reasonable current industry unit price and clearly note it is an estimate to confirm.",
-    "Keep replies short and plain. After editing, briefly state what you changed and the new subtotal.",
+    "You help build a construction cost estimate by editing it through the provided tools — never just describe edits, make them.",
+    "The estimate is organized by CSI MasterFormat divisions. Each line item has a quantity, unit, and PER-UNIT costs split into material, labor, equipment, and subcontractor buckets. The bid total is built up from direct cost via insurance, overhead, contingency, and profit percentages.",
+    "When the user mentions a material, quantity, or scope (e.g. '400 sq ft of drywall'), add or update the line item under the right CSI division. If they give one price with no breakdown, place it in the most fitting bucket (material for supplied goods, sub for subcontracted scopes, labor for install) and note it is an estimate to confirm.",
+    "Keep replies short and plain. After editing, confirm what you changed in plain terms.",
+    "Do NOT state the overall Total Bid Price (or basis/contingency/profit dollar amounts) as a specific figure — those recompute live in the app from compounding percentages and your mental math will drift. You may state a single line item's direct cost (quantity × unit cost, which is exact). For the bid total, refer the user to the live Total Bid Price shown in the panel.",
     "",
-    "Current estimate (JSON — use the ids when updating or removing items):",
+    "Current estimate (JSON — use the line-item ids when updating/removing):",
     JSON.stringify(estimate),
-    `Current subtotal: ${formatUSD(estimateSubtotal(estimate))}`,
+    `Direct cost: ${money(t.direct)} · Total Bid Price: ${money(t.total)} · ${t.lineCount} line items.`,
   ].join("\n");
 }
 

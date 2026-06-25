@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, type ReactNode } from "react";
-import { type Estimate, emptyEstimate } from "@/lib/estimate";
+import { type Estimate, defaultEstimate } from "@/lib/estimate";
 
 type EstimateContextValue = {
   estimate: Estimate;
@@ -11,7 +11,7 @@ type EstimateContextValue = {
 const EstimateContext = createContext<EstimateContextValue | null>(null);
 
 export function EstimateProvider({ children }: { children: ReactNode }) {
-  const [estimate, setEstimate] = useState<Estimate>(emptyEstimate());
+  const [estimate, setEstimate] = useState<Estimate>(defaultEstimate());
   return (
     <EstimateContext.Provider value={{ estimate, setEstimate }}>
       {children}
