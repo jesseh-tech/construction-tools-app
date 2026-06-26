@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { Analytics } from "@vercel/analytics/next";
 import { ProjectProvider } from "./ProjectProvider";
 import { AssistantWidget } from "./AssistantWidget";
 
@@ -51,6 +52,7 @@ export default function RootLayout({
           {children}
           <AssistantWidget />
         </ProjectProvider>
+        <Analytics />
       </body>
     </html>
   );

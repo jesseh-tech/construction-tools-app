@@ -390,6 +390,35 @@ export function seedJob(): Job {
 export const newId = (): string =>
   typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `c${Math.random().toString(36).slice(2)}`;
 
+// Forward-compatibility: fill any missing fields on a job loaded from storage so
+// data saved by an older version of the app never crashes newer pages.
+export function normalizeJob(input: unknown): Job {
+  const base = blankJob();
+  if (!input || typeof input !== "object") return seedJob();
+  const j = input as Partial<Job>;
+  const arr = <T>(v: unknown, fallback: T[]): T[] => (Array.isArray(v) ? (v as T[]) : fallback);
+  return {
+    meta: { ...base.meta, ...(j.meta ?? {}) },
+    markups: { ...base.markups, ...(j.markups ?? {}) },
+    divisions: arr(j.divisions, []),
+    changeOrders: arr(j.changeOrders, []),
+    billing: {
+      retainage: typeof j.billing?.retainage === "number" ? j.billing.retainage : base.billing.retainage,
+      pct: j.billing && typeof j.billing.pct === "object" && j.billing.pct ? j.billing.pct : {},
+    },
+    payapp: { ...base.payapp, ...(j.payapp ?? {}) },
+    proposal: { ...base.proposal, ...(j.proposal ?? {}) },
+    bidLeveling: j.bidLeveling ?? base.bidLeveling,
+    rfis: arr(j.rfis, []),
+    submittals: arr(j.submittals, []),
+    dailyReports: arr(j.dailyReports, []),
+    punchList: arr(j.punchList, []),
+    directory: arr(j.directory, []),
+    commitments: arr(j.commitments, []),
+    inspections: arr(j.inspections, []),
+  };
+}
+
 // A clean, empty job for starting a brand-new project.
 export function blankJob(): Job {
   return {

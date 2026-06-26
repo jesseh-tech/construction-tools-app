@@ -1,6 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse } from "next/server";
-import { type Job, seedJob, compute, sov, money } from "@/lib/store";
+import { type Job, normalizeJob, compute, sov, money } from "@/lib/store";
 import { tools, applyToolUse } from "@/lib/assistantTools";
 
 const CLOSED_STATUS = ["Approved", "Answered", "Closed", "Approved as Noted"];
@@ -63,7 +63,7 @@ export async function POST(req: Request) {
 
   const client = new Anthropic();
   const history = Array.isArray(body.messages) ? body.messages : [];
-  let working: Job = body.job ?? seedJob();
+  let working: Job = normalizeJob(body.job);
 
   const messages: Anthropic.MessageParam[] = history.map((m) => ({ role: m.role, content: m.content }));
   const system = systemPrompt(working, new Date().toISOString().slice(0, 10));

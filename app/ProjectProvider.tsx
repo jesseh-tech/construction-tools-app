@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
-import { type Job, seedJob, blankJob, newId } from "@/lib/store";
+import { type Job, seedJob, blankJob, normalizeJob, newId } from "@/lib/store";
 
 const STORE = "tencent.projects.v1";
 const LEGACY = "tencent.project.v1";
@@ -35,12 +35,17 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       if (raw) {
         const parsed = JSON.parse(raw) as ProjectsState;
         if (parsed && parsed.items && parsed.items[parsed.current]) {
-          setState(parsed);
+          // Upgrade every stored job so older saves don't crash newer pages.
+          const items: Record<string, Job> = {};
+          for (const [id, jb] of Object.entries(parsed.items)) items[id] = normalizeJob(jb);
+          const next: ProjectsState = { current: parsed.current, items };
+          setState(next);
+          localStorage.setItem(STORE, JSON.stringify(next));
           return;
         }
       }
       const legacy = localStorage.getItem(LEGACY);
-      const job = legacy ? (JSON.parse(legacy) as Job) : seedJob();
+      const job = legacy ? normalizeJob(JSON.parse(legacy)) : seedJob();
       const id = newId();
       const initial: ProjectsState = { current: id, items: { [id]: job } };
       setState(initial);
