@@ -49,7 +49,9 @@ export type BidLeveling = { trade: string; scope: BlScope[]; subs: BlSub[] };
 
 export type TrackItem = { id: string; refNo: string; title: string; court: string; due: string; status: string };
 export type Crew = { id: string; company: string; count: string; hours: string };
-export type DailyReport = { id: string; date: string; weather: string; temp: string; delays: string; crews: Crew[]; work: string; notes: string };
+export type Delivery = { id: string; from: string; item: string; tracking: string };
+export type Visitor = { id: string; name: string; company: string };
+export type DailyReport = { id: string; date: string; weather: string; temp: string; delays: string; crews: Crew[]; deliveries?: Delivery[]; visitors?: Visitor[]; work: string; notes: string };
 
 // Procore-style modules
 export type PunchItem = { id: string; number: string; title: string; location: string; trade: string; assignee: string; priority: "Low" | "Medium" | "High"; status: "Open" | "Ready to Review" | "Closed"; due: string };

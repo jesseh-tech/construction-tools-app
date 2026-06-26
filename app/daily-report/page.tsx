@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useProject } from "../ProjectProvider";
 import { ToolBar, ToolBarButton } from "../ToolBar";
-import { type DailyReport, type Crew, newId } from "@/lib/store";
+import { type DailyReport, type Crew, type Delivery, type Visitor, newId } from "@/lib/store";
 
 const ACCENT = "#f5a623";
 const MONTHS = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
@@ -19,6 +19,8 @@ const blank = (): DailyReport => ({
     { id: "c1", company: "10 Cent — Carpentry", count: "4", hours: "8" },
     { id: "c2", company: "Front Range Drywall", count: "6", hours: "8" },
   ],
+  deliveries: [],
+  visitors: [],
   work: "",
   notes: "",
 });
@@ -32,6 +34,16 @@ export default function DailyReportPage() {
   const addCrew = () => setCur((c) => ({ ...c, crews: [...c.crews, { id: newId(), company: "", count: "0", hours: "8" }] }));
   const removeCrew = (id: string) => setCur((c) => ({ ...c, crews: c.crews.filter((x) => x.id !== id) }));
 
+  const deliveries = cur.deliveries ?? [];
+  const setDelivery = (id: string, patch: Partial<Delivery>) => setCur((c) => ({ ...c, deliveries: (c.deliveries ?? []).map((x) => (x.id === id ? { ...x, ...patch } : x)) }));
+  const addDelivery = () => setCur((c) => ({ ...c, deliveries: [...(c.deliveries ?? []), { id: newId(), from: "", item: "", tracking: "" }] }));
+  const removeDelivery = (id: string) => setCur((c) => ({ ...c, deliveries: (c.deliveries ?? []).filter((x) => x.id !== id) }));
+
+  const visitors = cur.visitors ?? [];
+  const setVisitor = (id: string, patch: Partial<Visitor>) => setCur((c) => ({ ...c, visitors: (c.visitors ?? []).map((x) => (x.id === id ? { ...x, ...patch } : x)) }));
+  const addVisitor = () => setCur((c) => ({ ...c, visitors: [...(c.visitors ?? []), { id: newId(), name: "", company: "" }] }));
+  const removeVisitor = (id: string) => setCur((c) => ({ ...c, visitors: (c.visitors ?? []).filter((x) => x.id !== id) }));
+
   const headcount = cur.crews.reduce((a, c) => a + num(c.count), 0);
 
   const saveReport = () => {
@@ -44,7 +56,7 @@ export default function DailyReportPage() {
   };
   const loadReport = (id: string) => {
     const rep = job.dailyReports.find((r) => r.id === id);
-    if (rep) setCur(JSON.parse(JSON.stringify(rep)));
+    if (rep) setCur({ deliveries: [], visitors: [], ...JSON.parse(JSON.stringify(rep)) });
   };
   const removeReport = (id: string) => setJob({ ...job, dailyReports: job.dailyReports.filter((r) => r.id !== id) });
 
@@ -106,12 +118,49 @@ export default function DailyReportPage() {
             ))}
           </div>
 
+          {/* deliveries */}
+          <div style={{ background: "#fff", border: "1px solid #d6d3cb", marginTop: 18 }}>
+            <div style={{ display: "flex", alignItems: "center", padding: "14px 20px", borderBottom: "1px solid #efeee9" }}>
+              <div style={{ flex: 1, ...sectionH }}>Deliveries</div>
+              <div style={{ fontFamily: "'JetBrains Mono'", fontSize: 12, color: "#5a6470", marginRight: 16 }}>{deliveries.length} logged</div>
+              <button onClick={addDelivery} style={{ background: "transparent", border: "1px solid #15212d", color: "#15212d", fontFamily: "'Barlow Condensed'", fontWeight: 700, fontSize: 11, letterSpacing: "0.07em", textTransform: "uppercase", padding: "6px 11px", cursor: "pointer", borderRadius: 2 }}>+ Delivery</button>
+            </div>
+            {deliveries.length === 0 ? (
+              <div style={{ padding: "16px 20px", fontFamily: "'JetBrains Mono'", fontSize: 11, color: "#a59f92" }}>No deliveries logged. Track who delivered what, plus any tracking number.</div>
+            ) : deliveries.map((d) => (
+              <div key={d.id} className="est-row" style={{ display: "flex", alignItems: "center", gap: 12, padding: "0 20px", borderBottom: "1px solid #efeee9" }}>
+                <input value={d.from} onChange={(e) => setDelivery(d.id, { from: e.target.value })} placeholder="From (supplier)" style={{ flex: 1, border: "none", background: "transparent", fontFamily: "'Barlow'", fontWeight: 600, fontSize: 14, color: "#1c2b3a", height: 46, outline: "none" }} />
+                <input value={d.item} onChange={(e) => setDelivery(d.id, { item: e.target.value })} placeholder="Contents" style={{ flex: 1, border: "none", background: "transparent", fontFamily: "'Barlow'", fontSize: 14, color: "#1c2b3a", height: 46, outline: "none" }} />
+                <input value={d.tracking} onChange={(e) => setDelivery(d.id, { tracking: e.target.value })} placeholder="Tracking #" style={{ width: 130, border: "none", background: "transparent", fontFamily: "'JetBrains Mono'", fontSize: 12, color: "#5a6470", height: 46, outline: "none" }} />
+                <button onClick={() => removeDelivery(d.id)} style={{ width: 24, height: 24, flex: "none", border: "none", background: "none", color: "#bdb8ac", cursor: "pointer", fontSize: 11, borderRadius: 2 }}>✕</button>
+              </div>
+            ))}
+          </div>
+
+          {/* visitors */}
+          <div style={{ background: "#fff", border: "1px solid #d6d3cb", marginTop: 18 }}>
+            <div style={{ display: "flex", alignItems: "center", padding: "14px 20px", borderBottom: "1px solid #efeee9" }}>
+              <div style={{ flex: 1, ...sectionH }}>Visitors</div>
+              <div style={{ fontFamily: "'JetBrains Mono'", fontSize: 12, color: "#5a6470", marginRight: 16 }}>{visitors.length} on site</div>
+              <button onClick={addVisitor} style={{ background: "transparent", border: "1px solid #15212d", color: "#15212d", fontFamily: "'Barlow Condensed'", fontWeight: 700, fontSize: 11, letterSpacing: "0.07em", textTransform: "uppercase", padding: "6px 11px", cursor: "pointer", borderRadius: 2 }}>+ Visitor</button>
+            </div>
+            {visitors.length === 0 ? (
+              <div style={{ padding: "16px 20px", fontFamily: "'JetBrains Mono'", fontSize: 11, color: "#a59f92" }}>No visitors logged. Record inspectors, owners, vendors and other site visitors.</div>
+            ) : visitors.map((v) => (
+              <div key={v.id} className="est-row" style={{ display: "flex", alignItems: "center", gap: 12, padding: "0 20px", borderBottom: "1px solid #efeee9" }}>
+                <input value={v.name} onChange={(e) => setVisitor(v.id, { name: e.target.value })} placeholder="Name" style={{ flex: 1, border: "none", background: "transparent", fontFamily: "'Barlow'", fontWeight: 600, fontSize: 14, color: "#1c2b3a", height: 46, outline: "none" }} />
+                <input value={v.company} onChange={(e) => setVisitor(v.id, { company: e.target.value })} placeholder="Company / role" style={{ flex: 1, border: "none", background: "transparent", fontFamily: "'Barlow'", fontSize: 14, color: "#1c2b3a", height: 46, outline: "none" }} />
+                <button onClick={() => removeVisitor(v.id)} style={{ width: 24, height: 24, flex: "none", border: "none", background: "none", color: "#bdb8ac", cursor: "pointer", fontSize: 11, borderRadius: 2 }}>✕</button>
+              </div>
+            ))}
+          </div>
+
           {/* work + notes */}
           <div style={{ background: "#fff", border: "1px solid #d6d3cb", marginTop: 18, padding: "18px 20px" }}>
             <div style={{ ...sectionH, marginBottom: 10 }}>Work Performed Today</div>
             <textarea value={cur.work} onChange={(e) => setField("work", e.target.value)} rows={5} placeholder="Describe work completed by area and trade…" style={area} />
-            <div style={{ ...sectionH, margin: "18px 0 10px" }}>Notes / Issues / Deliveries</div>
-            <textarea value={cur.notes} onChange={(e) => setField("notes", e.target.value)} rows={4} placeholder="Inspections, RFIs, safety incidents, material deliveries, visitors…" style={area} />
+            <div style={{ ...sectionH, margin: "18px 0 10px" }}>Notes / Issues</div>
+            <textarea value={cur.notes} onChange={(e) => setField("notes", e.target.value)} rows={4} placeholder="Inspections, RFIs, safety observations, weather impacts…" style={area} />
           </div>
         </div>
 
@@ -125,6 +174,7 @@ export default function DailyReportPage() {
               const d = (r.date || "").split("-");
               const hc = r.crews.reduce((a, c) => a + num(c.count), 0);
               const hrs = r.crews.reduce((a, c) => a + num(c.count) * num(c.hours), 0);
+              const dl = (r.deliveries ?? []).length;
               return (
                 <div key={r.id} onClick={() => loadReport(r.id)} style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", borderBottom: "1px solid #243646", cursor: "pointer" }}>
                   <div style={{ flex: "none", width: 40, height: 40, background: "#243646", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", borderRadius: 2 }}>
@@ -133,7 +183,7 @@ export default function DailyReportPage() {
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontFamily: "'Barlow'", fontWeight: 600, fontSize: 13, color: "#f4f3f0" }}>{r.weather} · {r.temp}°</div>
-                    <div style={{ fontFamily: "'JetBrains Mono'", fontSize: 10, color: "#9aa6b2", marginTop: 2 }}>{hc} workers · {hrs} hrs</div>
+                    <div style={{ fontFamily: "'JetBrains Mono'", fontSize: 10, color: "#9aa6b2", marginTop: 2 }}>{hc} workers · {hrs} hrs{dl > 0 ? ` · ${dl} deliv` : ""}</div>
                   </div>
                   <button onClick={(e) => { e.stopPropagation(); removeReport(r.id); }} style={{ width: 22, height: 22, flex: "none", border: "none", background: "none", color: "#5e6b78", cursor: "pointer", fontSize: 11, borderRadius: 2 }}>✕</button>
                 </div>
