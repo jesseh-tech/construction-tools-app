@@ -344,6 +344,7 @@ export const tools: Anthropic.Tool[] = [
         severity: { type: "string", enum: ["Low", "Medium", "High", "Recordable"] },
         location: { type: "string" },
         reportedBy: { type: "string" },
+        corrective: { type: "string", description: "Corrective action taken or planned." },
       },
       required: ["description"],
     },
@@ -701,6 +702,7 @@ export function applyToolUse(job: Job, name: string, input: ToolInput): { job: J
         description: str(input.description),
         location: str(input.location),
         reportedBy: str(input.reportedBy, "GC"),
+        corrective: str(input.corrective),
         status: "Open",
       };
       j.incidents = [...j.incidents, inc];

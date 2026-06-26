@@ -60,7 +60,7 @@ export type Inspection = { id: string; title: string; type: "Quality" | "Safety"
 
 export type Task = { id: string; title: string; assignee: string; due: string; priority: "Low" | "Medium" | "High"; status: "Open" | "In Progress" | "Done" };
 export type Observation = { id: string; number: string; type: "Safety" | "Quality" | "Commissioning" | "Warranty" | "Environmental"; title: string; location: string; assignee: string; date: string; status: "Open" | "Closed" };
-export type Incident = { id: string; number: string; date: string; type: "Injury" | "Near Miss" | "Property Damage" | "Environmental"; severity: "Low" | "Medium" | "High" | "Recordable"; description: string; location: string; reportedBy: string; status: "Open" | "Under Review" | "Closed" };
+export type Incident = { id: string; number: string; date: string; type: "Injury" | "Near Miss" | "Property Damage" | "Environmental"; severity: "Low" | "Medium" | "High" | "Recordable"; description: string; location: string; reportedBy: string; corrective: string; status: "Open" | "Under Review" | "Closed" };
 
 export type ActionItem = { id: string; text: string; owner: string; done: boolean };
 export type Meeting = { id: string; title: string; date: string; attendees: string; notes: string; actions: ActionItem[] };

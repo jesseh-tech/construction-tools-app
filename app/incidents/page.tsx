@@ -19,7 +19,7 @@ export default function IncidentsPage() {
 
   const setList = (n: Incident[]) => setJob({ ...job, incidents: n });
   const setItem = (id: string, patch: Partial<Incident>) => setList(list.map((x) => (x.id === id ? { ...x, ...patch } : x)));
-  const add = () => setList([{ id: newId(), number: `INC-${String(list.length + 1).padStart(3, "0")}`, date: TODAY, type: "Near Miss", severity: "Low", description: "", location: "", reportedBy: "GC", status: "Open" }, ...list]);
+  const add = () => setList([{ id: newId(), number: `INC-${String(list.length + 1).padStart(3, "0")}`, date: TODAY, type: "Near Miss", severity: "Low", description: "", location: "", reportedBy: "GC", corrective: "", status: "Open" }, ...list]);
 
   const th: React.CSSProperties = { fontFamily: "'Barlow Condensed'", fontWeight: 700, fontSize: 11, letterSpacing: "0.1em", borderLeft: "1px solid rgba(255,255,255,0.06)" };
   const open = list.filter((x) => x.status !== "Closed").length;
@@ -40,15 +40,16 @@ export default function IncidentsPage() {
 
       <div style={{ padding: 22 }}>
         <div className="xscroll">
-          <div style={{ background: "#fff", border: "1px solid #d6d3cb", minWidth: 1060 }}>
+          <div style={{ background: "#fff", border: "1px solid #d6d3cb", minWidth: 1230 }}>
             <div style={{ display: "flex", alignItems: "stretch", background: "#15212d", color: "#9aa6b2", textTransform: "uppercase", height: 48 }}>
               <div style={{ width: 86, flex: "none", display: "flex", alignItems: "center", paddingLeft: 16, ...th, borderLeft: "none" }}>#</div>
               <div style={{ width: 120, flex: "none", display: "flex", alignItems: "center", justifyContent: "center", ...th }}>Date</div>
               <div style={{ width: 150, flex: "none", display: "flex", alignItems: "center", justifyContent: "center", ...th }}>Type</div>
               <div style={{ width: 120, flex: "none", display: "flex", alignItems: "center", justifyContent: "center", ...th }}>Severity</div>
-              <div style={{ flex: 1, minWidth: 220, display: "flex", alignItems: "center", paddingLeft: 12, ...th }}>Description</div>
+              <div style={{ flex: 1, minWidth: 200, display: "flex", alignItems: "center", paddingLeft: 12, ...th }}>Description</div>
               <div style={{ width: 130, flex: "none", display: "flex", alignItems: "center", paddingLeft: 12, ...th }}>Location</div>
               <div style={{ width: 130, flex: "none", display: "flex", alignItems: "center", paddingLeft: 12, ...th }}>Reported By</div>
+              <div style={{ width: 180, flex: "none", display: "flex", alignItems: "center", paddingLeft: 12, ...th }}>Corrective Action</div>
               <div style={{ width: 140, flex: "none", display: "flex", alignItems: "center", justifyContent: "center", ...th }}>Status</div>
               <div style={{ width: 44, flex: "none" }} />
             </div>
@@ -85,6 +86,9 @@ export default function IncidentsPage() {
                   </div>
                   <div style={{ width: 130, flex: "none", borderLeft: "1px solid #efeee9", display: "flex", alignItems: "center" }}>
                     <input value={x.reportedBy} onChange={(e) => setItem(x.id, { reportedBy: e.target.value })} style={{ width: "100%", border: "none", background: "transparent", fontFamily: "'Barlow'", fontSize: 13, color: "#1c2b3a", height: 48, outline: "none", padding: "0 12px" }} />
+                  </div>
+                  <div style={{ width: 180, flex: "none", borderLeft: "1px solid #efeee9", display: "flex", alignItems: "center" }}>
+                    <input value={x.corrective ?? ""} onChange={(e) => setItem(x.id, { corrective: e.target.value })} placeholder="Action taken…" style={{ width: "100%", border: "none", background: "transparent", fontFamily: "'Barlow'", fontSize: 13, color: "#1c2b3a", height: 48, outline: "none", padding: "0 12px" }} />
                   </div>
                   <div style={{ width: 140, flex: "none", borderLeft: "1px solid #efeee9", display: "flex", alignItems: "center", justifyContent: "center", padding: "0 8px" }}>
                     <select value={x.status} onChange={(e) => setItem(x.id, { status: e.target.value as Incident["status"] })} style={{ width: "100%", border: "1px solid #d6d3cb", background: st.bg, color: st.color, fontFamily: "'Barlow Condensed'", fontWeight: 700, fontSize: 11, textTransform: "uppercase", textAlign: "center", textAlignLast: "center", height: 30, outline: "none", cursor: "pointer", borderRadius: 2 }}>
