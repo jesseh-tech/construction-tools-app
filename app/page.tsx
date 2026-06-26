@@ -68,6 +68,7 @@ export default function TitlePage() {
 
       {/* crane drawing */}
       <div
+        className="cover-crane"
         style={{ position: "absolute", top: 0, right: 0, bottom: 0, width: "60%", minWidth: 560, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}
         dangerouslySetInnerHTML={{ __html: CRANE_SVG }}
       />
@@ -82,20 +83,20 @@ export default function TitlePage() {
           </div>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18 }}>
+        <div className="cover-rise" style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18 }}>
           <span style={{ width: 38, height: 2, background: "#f5a623" }} />
-          <span style={{ fontFamily: "'JetBrains Mono'", fontSize: 12, letterSpacing: "0.26em", color: "#9aa6b2", textTransform: "uppercase" }}>General Contracting · Est. Platform</span>
+          <span style={{ fontFamily: "'JetBrains Mono'", fontSize: 12, letterSpacing: "0.26em", color: "#9aa6b2", textTransform: "uppercase" }}>General Contracting · AI-Native Platform</span>
         </div>
 
-        <h1 style={{ margin: 0, fontFamily: "'Barlow Condensed'", fontWeight: 700, fontSize: "clamp(58px,8.4vw,118px)", lineHeight: 0.9, letterSpacing: "0.005em", textTransform: "uppercase" }}>
+        <h1 className="cover-rise" style={{ margin: 0, fontFamily: "'Barlow Condensed'", fontWeight: 700, fontSize: "clamp(58px,8.4vw,118px)", lineHeight: 0.9, letterSpacing: "0.005em", textTransform: "uppercase" }}>
           Construction<br /><span style={{ color: "#f5a623" }}>Tools</span>
         </h1>
 
-        <p style={{ margin: "26px 0 0", maxWidth: 440, fontSize: 17, lineHeight: 1.55, color: "#c4ccd4" }}>
-          Nine integrated tools, from first takeoff to final pay application. One project, one source of truth — preconstruction straight through to the field.
+        <p className="cover-rise-2" style={{ margin: "26px 0 0", maxWidth: 460, fontSize: 17, lineHeight: 1.55, color: "#c4ccd4" }}>
+          Nineteen integrated tools with a built-in AI assistant — from first takeoff to final closeout. One project, one source of truth, preconstruction straight through to the field.
         </p>
 
-        <Link href="/dashboard" style={{ display: "inline-flex", alignItems: "stretch", width: "fit-content", marginTop: 44, border: "1px solid #f5a623", background: "#f5a623", color: "#15212d" }}>
+        <Link href="/dashboard" className="cover-cta cover-rise-3" style={{ display: "inline-flex", alignItems: "stretch", width: "fit-content", marginTop: 44, border: "1px solid #f5a623", background: "#f5a623", color: "#15212d" }}>
           <span style={{ display: "flex", flexDirection: "column", justifyContent: "center", padding: "18px 30px" }}>
             <span style={{ fontFamily: "'Barlow Condensed'", fontWeight: 700, fontSize: 26, letterSpacing: "0.08em", lineHeight: 1, textTransform: "uppercase" }}>Enter Dashboard</span>
             <span style={{ fontFamily: "'JetBrains Mono'", fontSize: 10, letterSpacing: "0.16em", marginTop: 5, color: "#5a3d05" }}>LAUNCH THE PROJECT WORKSPACE</span>
@@ -103,21 +104,22 @@ export default function TitlePage() {
           <span style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "0 24px", borderLeft: "1px solid rgba(21,33,45,0.25)", fontSize: 30, fontWeight: 600 }}>→</span>
         </Link>
 
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "8px 10px", marginTop: 40 }}>
-          {["ESTIMATE", "SOV", "PROPOSAL", "TAKEOFF", "PAY APP", "RFIs +4"].map((t) => (
+        <div className="cover-rise-4" style={{ display: "flex", flexWrap: "wrap", gap: "8px 10px", marginTop: 40 }}>
+          {["ESTIMATE", "TAKEOFF", "CHANGE ORDERS", "PAY APP", "SUBMITTALS", "SCHEDULE", "SAFETY", "+12 MORE"].map((t) => (
             <span key={t} style={{ fontFamily: "'JetBrains Mono'", fontSize: 11, letterSpacing: "0.08em", color: "#7f8c99", border: "1px solid rgba(127,140,153,0.3)", padding: "5px 10px" }}>{t}</span>
           ))}
+          <span style={{ fontFamily: "'JetBrains Mono'", fontSize: 11, letterSpacing: "0.08em", color: "#15212d", background: "#f5a623", padding: "5px 10px", fontWeight: 700 }}>✨ AI ASSISTANT</span>
         </div>
       </div>
 
       {/* drawing title block */}
-      <div style={{ position: "absolute", right: 46, bottom: 46, zIndex: 6, width: 330, background: "rgba(15,26,36,0.82)", border: "1px solid rgba(154,166,178,0.35)", backdropFilter: "blur(2px)", fontFamily: "'JetBrains Mono'" }}>
+      <div className="cover-titleblock" style={{ position: "absolute", right: 46, bottom: 46, zIndex: 6, width: 330, background: "rgba(15,26,36,0.82)", border: "1px solid rgba(154,166,178,0.35)", backdropFilter: "blur(2px)", fontFamily: "'JetBrains Mono'" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", borderBottom: "1px solid rgba(154,166,178,0.25)" }}>
           <span style={{ fontSize: 10, letterSpacing: "0.2em", color: "#f5a623" }}>10 CENT INVESTMENTS</span>
           <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 9, letterSpacing: "0.14em", color: "#7f8c99" }}><span style={{ width: 7, height: 7, borderRadius: "50%", background: "#f5a623", animation: "blink 2.4s steps(1) infinite" }} />READY</span>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr" }}>
-          {[["SHEET", "G-001"], ["SCALE", "NTS"], ["DISCIPLINE", "GENERAL"], ["REV", "2.0"]].map(([k, v], i) => (
+          {[["SHEET", "G-001"], ["SCALE", "NTS"], ["DISCIPLINE", "GENERAL"], ["REV", "3.0"]].map(([k, v], i) => (
             <div key={k} style={{ padding: "9px 12px", borderRight: i % 2 === 0 ? "1px solid rgba(154,166,178,0.2)" : "none", borderBottom: i < 2 ? "1px solid rgba(154,166,178,0.2)" : "none" }}>
               <div style={{ fontSize: 8, letterSpacing: "0.18em", color: "#5f6b77" }}>{k}</div>
               <div style={{ fontSize: 14, color: "#e7e5df", marginTop: 2 }}>{v}</div>

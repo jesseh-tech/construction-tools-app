@@ -28,7 +28,7 @@ export function AssistantWidget() {
     {
       role: "assistant",
       content:
-        "Hi — I'm your project assistant. I can update your estimate, SOV, change orders, pay app, submittals, daily reports and more, and answer questions about the job. Type, or tap 🎤 and talk to me.",
+        "Hi — I'm your project assistant. I can update your estimate, change orders, pay app, submittals, schedule, punch list, tasks and safety logs — and answer questions about the job. Type, or tap 🎤 and talk to me.",
     },
   ]);
   const [input, setInput] = useState("");
@@ -131,15 +131,15 @@ export function AssistantWidget() {
     <>
       <button
         onClick={() => setOpen((o) => !o)}
-        className="noprint fixed bottom-5 right-5 z-50 rounded-full bg-[#15212d] px-5 py-3 font-semibold text-white shadow-lg hover:bg-[#1d2c3b] focus:outline-none focus:ring-2 focus:ring-[#f5a623]"
+        className="noprint fixed bottom-5 right-5 z-50 rounded-full bg-[#15212d] px-5 py-3 font-semibold text-white shadow-lg transition-all hover:scale-105 hover:bg-[#1d2c3b] focus:outline-none focus:ring-2 focus:ring-[#f5a623]"
         aria-label="Toggle assistant"
       >
         {open ? "Close" : "💬 Assistant"}
       </button>
 
       {open && (
-        <div className="noprint fixed bottom-20 left-3 right-3 z-50 flex h-[72vh] flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl sm:left-auto sm:right-5 sm:h-[28rem] sm:w-[23rem]">
-          <div className="flex items-center gap-2 border-b border-gray-200 bg-[#15212d] px-4 py-3 text-white">
+        <div className="assistant-pop noprint fixed bottom-20 left-3 right-3 z-50 flex h-[72vh] flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl sm:left-auto sm:right-5 sm:h-[28rem] sm:w-[23rem]">
+          <div className="flex items-center gap-2 border-b-2 border-[#f5a623] bg-[#15212d] px-4 py-3 text-white">
             <span className="font-semibold">Project Assistant</span>
             {listening ? (
               <span className="ml-auto flex items-center gap-1.5 text-xs text-[#f5a623]">
@@ -176,8 +176,9 @@ export function AssistantWidget() {
                 {[
                   "What's my total bid and margin?",
                   "Add 400 sq ft of drywall",
+                  "Log a safety observation in the lobby",
+                  "Add a task to order door hardware",
                   "Which RFIs are overdue?",
-                  "Mark Finishes 60% complete",
                 ].map((s) => (
                   <button
                     key={s}
