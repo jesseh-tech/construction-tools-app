@@ -51,6 +51,10 @@ export default function DashboardPage() {
       const n = job.changeOrders.length;
       return { stat: n ? `${n} ${n === 1 ? "CO" : "COs"}` : "NONE", label: "LOGGED" };
     }
+    if (app.id === "punch") return { stat: String(job.punchList.filter((p) => p.status !== "Closed").length), label: "OPEN ITEMS" };
+    if (app.id === "directory") return { stat: String(job.directory.length), label: "CONTACTS" };
+    if (app.id === "commitments") return { stat: money0(job.commitments.reduce((a, x) => a + x.amount, 0)), label: "COMMITTED" };
+    if (app.id === "inspections") return { stat: String(job.inspections.length), label: "INSPECTIONS" };
     return { stat: app.active ? "READY" : "SOON", label: "STATUS" };
   };
 
@@ -203,6 +207,7 @@ export default function DashboardPage() {
         <Section title="Preconstruction" sub="ESTIMATE · SOV · PROPOSAL · LEVELING · TAKEOFF" phase="PRECONSTRUCTION" />
         <Section title="Project Controls" sub="CHANGE ORDERS · PAY APPS · SUBMITTALS" phase="PROJECT CONTROLS" />
         <Section title="Field" sub="DAILY REPORTS" phase="FIELD" />
+        <Section title="Quality & Closeout" sub="PUNCH LIST · INSPECTIONS & SAFETY" phase="QUALITY & CLOSEOUT" />
 
         {/* project documents */}
         <div style={{ display: "flex", alignItems: "center", gap: 14, margin: "34px 0 14px" }}>

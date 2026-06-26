@@ -51,6 +51,13 @@ export type TrackItem = { id: string; refNo: string; title: string; court: strin
 export type Crew = { id: string; company: string; count: string; hours: string };
 export type DailyReport = { id: string; date: string; weather: string; temp: string; delays: string; crews: Crew[]; work: string; notes: string };
 
+// Procore-style modules
+export type PunchItem = { id: string; number: string; title: string; location: string; trade: string; assignee: string; priority: "Low" | "Medium" | "High"; status: "Open" | "Ready to Review" | "Closed"; due: string };
+export type Contact = { id: string; company: string; name: string; role: string; email: string; phone: string; type: "Owner" | "Architect" | "Engineer" | "General Contractor" | "Subcontractor" | "Vendor" };
+export type Commitment = { id: string; number: string; type: "Subcontract" | "Purchase Order"; company: string; division: string; description: string; amount: number; status: "Draft" | "Out for Signature" | "Executed" | "Closed" };
+export type ChecklistItem = { id: string; text: string; result: "" | "Pass" | "Fail" | "N/A" };
+export type Inspection = { id: string; title: string; type: "Quality" | "Safety"; date: string; inspector: string; status: "Open" | "Passed" | "Failed"; items: ChecklistItem[] };
+
 export type Job = {
   meta: Meta;
   markups: Markups;
@@ -63,6 +70,10 @@ export type Job = {
   rfis: TrackItem[];
   submittals: TrackItem[];
   dailyReports: DailyReport[];
+  punchList: PunchItem[];
+  directory: Contact[];
+  commitments: Commitment[];
+  inspections: Inspection[];
 };
 
 export const proposalDefaults = (): Proposal => ({
@@ -138,7 +149,7 @@ export const CSI_CATALOG: [string, string][] = [
 export const csiName = (code: string): string =>
   CSI_CATALOG.find(([c]) => c === code)?.[1] ?? "Custom Division";
 
-export type AppPhase = "PRECONSTRUCTION" | "PROJECT CONTROLS" | "FIELD";
+export type AppPhase = "PRECONSTRUCTION" | "PROJECT CONTROLS" | "FIELD" | "QUALITY & CLOSEOUT";
 
 export type AppEntry = {
   id: string;
@@ -163,6 +174,10 @@ export const APPS: AppEntry[] = [
   { id: "payapp", route: "/pay-app", no: "07", name: "Pay Application", tag: "PROJECT CONTROLS", active: true, desc: "G702/G703 monthly draw with retainage, from SOV + change orders.", feeds: "From SOV + COs" },
   { id: "submittals", route: "/submittals", no: "08", name: "Submittals & RFIs", tag: "PROJECT CONTROLS", active: true, desc: "Log submittals and RFIs with status and ball-in-court.", feeds: "Standalone" },
   { id: "daily", route: "/daily-report", no: "09", name: "Daily Field Report", tag: "FIELD", active: true, desc: "Weather, crew, work performed and photos from the field.", feeds: "Standalone" },
+  { id: "directory", route: "/directory", no: "10", name: "Project Directory", tag: "PROJECT CONTROLS", active: false, desc: "Companies & contacts — owner, architect, subs and vendors.", feeds: "Ball in court" },
+  { id: "commitments", route: "/commitments", no: "11", name: "Commitments", tag: "PROJECT CONTROLS", active: false, desc: "Subcontracts & POs tracked against the estimate budget.", feeds: "Buyout vs estimate" },
+  { id: "punch", route: "/punch-list", no: "12", name: "Punch List", tag: "QUALITY & CLOSEOUT", active: true, desc: "Closeout deficiencies by location, trade, assignee and status.", feeds: "Field & closeout" },
+  { id: "inspections", route: "/inspections", no: "13", name: "Inspections & Safety", tag: "QUALITY & CLOSEOUT", active: false, desc: "Quality & safety checklists, observations and toolbox talks.", feeds: "Quality & safety" },
 ];
 
 // ---- math ----
@@ -347,6 +362,28 @@ export function seedJob(): Job {
       { id: newId(), refNo: "RFI-002", title: "Confirm finish floor elevation at break room", court: "Architect", due: "2026-05-22", status: "Answered" },
     ],
     dailyReports: [],
+    punchList: [
+      { id: newId(), number: "PL-001", title: "Cracked tile at lobby entry", location: "Lobby", trade: "Tile", assignee: "Summit Interiors", priority: "Medium", status: "Open", due: "2026-07-15" },
+      { id: newId(), number: "PL-002", title: "Touch-up paint at corridor B", location: "Corridor B", trade: "Paint", assignee: "Front Range Drywall", priority: "Low", status: "Ready to Review", due: "2026-07-10" },
+      { id: newId(), number: "PL-003", title: "Door hardware misaligned — Suite 410", location: "Suite 410", trade: "Doors", assignee: "GC", priority: "High", status: "Open", due: "2026-07-05" },
+    ],
+    directory: [
+      { id: newId(), company: "Meridian Capital Partners", name: "D. Cole", role: "Owner's Rep", email: "dcole@meridian.example", phone: "303-555-0140", type: "Owner" },
+      { id: newId(), company: "Hartwell Architects", name: "J. Hart", role: "Architect of Record", email: "jhart@hartwell.example", phone: "303-555-0188", type: "Architect" },
+      { id: newId(), company: "Summit Interiors", name: "R. Vance", role: "Drywall / ACT / Paint", email: "r.vance@summit.example", phone: "720-555-0112", type: "Subcontractor" },
+      { id: newId(), company: "Front Range Drywall", name: "M. Ortega", role: "Drywall", email: "mortega@frd.example", phone: "720-555-0133", type: "Subcontractor" },
+    ],
+    commitments: [
+      { id: newId(), number: "SC-001", type: "Subcontract", company: "Summit Interiors", division: "09", description: "Drywall, ACT & paint package", amount: 108500, status: "Executed" },
+      { id: newId(), number: "PO-001", type: "Purchase Order", company: "Mountain Supply Co.", division: "08", description: "Door hardware sets — ADA", amount: 6400, status: "Out for Signature" },
+    ],
+    inspections: [
+      { id: newId(), title: "Pre-drywall framing inspection", type: "Quality", date: "2026-06-18", inspector: "GC", status: "Passed", items: [
+        { id: newId(), text: "Stud spacing per plan", result: "Pass" },
+        { id: newId(), text: "Blocking installed for casework", result: "Pass" },
+        { id: newId(), text: "MEP rough-in complete & inspected", result: "Pass" },
+      ] },
+    ],
   };
 }
 
@@ -367,5 +404,9 @@ export function blankJob(): Job {
     submittals: [],
     rfis: [],
     dailyReports: [],
+    punchList: [],
+    directory: [],
+    commitments: [],
+    inspections: [],
   };
 }

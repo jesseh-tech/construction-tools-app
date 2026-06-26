@@ -2,7 +2,7 @@
 // executor that applies a tool call and returns the new job.
 import type Anthropic from "@anthropic-ai/sdk";
 import { randomUUID } from "node:crypto";
-import { type Job, type Division, type LineItem, type TrackItem, type DailyReport, type Crew, type Proposal, UNITS, CSI_CATALOG, csiName, bidLevelingDefaults } from "./store";
+import { type Job, type Division, type LineItem, type TrackItem, type DailyReport, type Crew, type Proposal, type PunchItem, UNITS, CSI_CATALOG, csiName, bidLevelingDefaults } from "./store";
 
 const unitList = UNITS.join(", ");
 const csiList = CSI_CATALOG.map(([c, name]) => `${c} ${name}`).join("; ");
@@ -224,6 +224,40 @@ export const tools: Anthropic.Tool[] = [
       additionalProperties: false,
     },
   },
+  {
+    name: "add_punch_item",
+    description: "Add a punch-list (closeout deficiency) item. A number is assigned automatically; status defaults to Open.",
+    input_schema: {
+      type: "object",
+      properties: {
+        title: { type: "string", description: "What needs fixing." },
+        location: { type: "string", description: "Where (room/area)." },
+        trade: { type: "string", description: "Responsible trade (e.g. Tile, Paint, Doors, Electrical)." },
+        assignee: { type: "string", description: "Company or person responsible." },
+        priority: { type: "string", enum: ["Low", "Medium", "High"] },
+        due: { type: "string", description: "Due date YYYY-MM-DD; optional." },
+      },
+      required: ["title"],
+    },
+  },
+  {
+    name: "update_punch_item",
+    description: "Update a punch-list item by its number (e.g. PL-002) — change status (Open / Ready to Review / Closed), assignee, trade, priority, location, due date, or title.",
+    input_schema: {
+      type: "object",
+      properties: {
+        number: { type: "string" },
+        title: { type: "string" },
+        location: { type: "string" },
+        trade: { type: "string" },
+        assignee: { type: "string" },
+        priority: { type: "string", enum: ["Low", "Medium", "High"] },
+        status: { type: "string", enum: ["Open", "Ready to Review", "Closed"] },
+        due: { type: "string" },
+      },
+      required: ["number"],
+    },
+  },
 ];
 
 type ToolInput = Record<string, unknown>;
@@ -246,6 +280,10 @@ function clone(job: Job): Job {
     rfis: [...job.rfis],
     submittals: [...job.submittals],
     dailyReports: [...job.dailyReports],
+    punchList: [...job.punchList],
+    directory: [...job.directory],
+    commitments: [...job.commitments],
+    inspections: [...job.inspections],
   };
 }
 
@@ -427,6 +465,36 @@ export function applyToolUse(job: Job, name: string, input: ToolInput): { job: J
       if (!sc) return { job: j, result: `No scope line matching "${str(input.scope)}".` };
       j.bidLeveling = { ...bl, subs: bl.subs.map((s) => (s.id !== sub.id ? s : { ...s, prices: { ...s.prices, [sc.id]: String(num(input.amount)) } })) };
       return { job: j, result: `Set ${sub.name} · ${sc.label} to $${num(input.amount)}.` };
+    }
+    case "add_punch_item": {
+      const pr = ["Low", "Medium", "High"].includes(str(input.priority)) ? str(input.priority) : "Medium";
+      const item: PunchItem = {
+        id: randomUUID(),
+        number: `PL-${String(j.punchList.length + 1).padStart(3, "0")}`,
+        title: str(input.title),
+        location: str(input.location),
+        trade: str(input.trade),
+        assignee: str(input.assignee, "GC"),
+        priority: pr as PunchItem["priority"],
+        status: "Open",
+        due: str(input.due),
+      };
+      j.punchList = [...j.punchList, item];
+      return { job: j, result: `Added ${item.number}: ${item.title}` };
+    }
+    case "update_punch_item": {
+      const numRef = str(input.number);
+      if (!j.punchList.some((p) => p.number === numRef)) return { job: j, result: `No punch item ${numRef}.` };
+      const patch: Partial<PunchItem> = {};
+      if (input.title !== undefined) patch.title = str(input.title);
+      if (input.location !== undefined) patch.location = str(input.location);
+      if (input.trade !== undefined) patch.trade = str(input.trade);
+      if (input.assignee !== undefined) patch.assignee = str(input.assignee);
+      if (input.priority !== undefined) patch.priority = str(input.priority) as PunchItem["priority"];
+      if (input.status !== undefined) patch.status = str(input.status) as PunchItem["status"];
+      if (input.due !== undefined) patch.due = str(input.due);
+      j.punchList = j.punchList.map((p) => (p.number === numRef ? { ...p, ...patch } : p));
+      return { job: j, result: `Updated ${numRef}.` };
     }
     default:
       return { job: j, result: `Unknown tool: ${name}.` };
