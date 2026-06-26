@@ -61,6 +61,24 @@ export default function EstimatePage() {
 
   const usedCodes = new Set(job.divisions.map((d) => d.code));
 
+  const exportCsv = () => {
+    const header = ["Division Code", "Division", "Description", "Qty", "Unit", "Material/unit", "Labor/unit", "Equip/unit", "Sub/unit", "Line Total"];
+    const rows: (string | number)[][] = [header];
+    job.divisions.forEach((d) =>
+      d.items.forEach((li) => rows.push([d.code, d.name, li.desc, li.qty, li.unit, li.m, li.l, li.e, li.s, li.qty * (li.m + li.l + li.e + li.s)])),
+    );
+    rows.push([]);
+    rows.push(["", "", "Total Direct Cost", "", "", "", "", "", "", c.direct]);
+    rows.push(["", "", "Total Bid Price", "", "", "", "", "", "", c.total]);
+    const csv = rows.map((r) => r.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")).join("\r\n");
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${job.meta.name || "estimate"} — estimate.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   // shared styles
   const headBtn: React.CSSProperties = { background: "transparent", border: "1.5px solid #1c2b3a", color: "#1c2b3a", fontFamily: "'Barlow Condensed'", fontWeight: 700, fontSize: 12, letterSpacing: "0.08em", textTransform: "uppercase", padding: "8px 13px", cursor: "pointer", borderRadius: 2 };
   const pctBox: React.CSSProperties = { display: "flex", alignItems: "center", gap: 4, marginRight: 22, background: "#f4f3f0", border: "1.5px solid #cfccc2", padding: "5px 9px", borderRadius: 2 };
@@ -146,6 +164,7 @@ export default function EstimatePage() {
           <h2 style={{ margin: 0, fontFamily: "'Barlow Condensed'", fontWeight: 700, fontSize: 23, letterSpacing: "0.05em", textTransform: "uppercase", color: "#1c2b3a" }}>Estimate Worksheet</h2>
           <span style={{ fontFamily: "'JetBrains Mono'", fontSize: 11, color: "#8a8578", letterSpacing: "0.05em", borderLeft: "2px solid #c9c5b8", paddingLeft: 14 }}>CSI MASTERFORMAT · UNIT-PRICE METHOD</span>
           <div style={{ flex: 1 }} />
+          <button style={headBtn} onClick={exportCsv}>Export CSV</button>
           <button style={headBtn} onClick={() => setAll(true)}>Collapse All</button>
           <button style={headBtn} onClick={() => setAll(false)}>Expand All</button>
           <div style={{ position: "relative" }}>

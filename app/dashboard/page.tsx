@@ -14,6 +14,29 @@ export default function DashboardPage() {
   const c = compute(job);
   const [files, setFiles] = useState<FileRec[]>([]);
   const [dragging, setDragging] = useState(false);
+  const [brief, setBrief] = useState<string | null>(null);
+  const [briefing, setBriefing] = useState(false);
+
+  const briefMe = async () => {
+    setBriefing(true);
+    setBrief(null);
+    try {
+      const res = await fetch("/api/assistant", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: [{ role: "user", content: "Give me a brief executive status of this project in 3-4 sentences: total bid price, margin, billing % to date, change orders, and anything overdue or risky. Do not make any edits — just summarize." }],
+          job,
+        }),
+      });
+      const data = await res.json();
+      setBrief(res.ok ? data.reply || "No summary available." : data.error || "Couldn't generate a summary.");
+    } catch {
+      setBrief("Couldn't reach the assistant.");
+    } finally {
+      setBriefing(false);
+    }
+  };
 
   const reloadFiles = useCallback(() => { filesAll().then(setFiles); }, []);
   useEffect(() => { reloadFiles(); }, [reloadFiles]);
@@ -111,6 +134,7 @@ export default function DashboardPage() {
         </select>
         <span style={{ fontFamily: "'JetBrains Mono'", fontSize: 10, color: "#5e6b78" }}>{projects.length} job{projects.length === 1 ? "" : "s"}</span>
         <div style={{ flex: 1 }} />
+        <button onClick={briefMe} disabled={briefing} style={{ background: "transparent", border: `1px solid ${ACCENT}`, color: ACCENT, fontFamily: "'Barlow Condensed'", fontWeight: 700, fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", padding: "6px 12px", cursor: "pointer", borderRadius: 2, opacity: briefing ? 0.6 : 1 }}>{briefing ? "Briefing…" : "✨ Brief Me"}</button>
         <button onClick={newProject} style={{ background: ACCENT, border: "none", color: "#15212d", fontFamily: "'Barlow Condensed'", fontWeight: 700, fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", padding: "6px 12px", cursor: "pointer", borderRadius: 2 }}>+ New Project</button>
         <button
           onClick={() => { if (window.confirm(`Delete project "${job.meta.name}"? This can't be undone.`)) deleteProject(currentId); }}
@@ -119,6 +143,15 @@ export default function DashboardPage() {
           Delete
         </button>
       </div>
+
+      {/* AI brief */}
+      {(brief || briefing) && (
+        <div style={{ background: "#15212d", color: "#f4f3f0", borderBottom: `3px solid ${ACCENT}`, padding: "16px 22px", display: "flex", alignItems: "flex-start", gap: 14 }}>
+          <span style={{ fontFamily: "'Barlow Condensed'", fontWeight: 700, fontSize: 11, letterSpacing: "0.16em", color: ACCENT, textTransform: "uppercase", flex: "none", paddingTop: 2 }}>✨ Brief</span>
+          <p style={{ flex: 1, margin: 0, fontFamily: "'Barlow'", fontSize: 14, lineHeight: 1.55, color: "#dfe4e9" }}>{briefing ? "Generating a status summary…" : brief}</p>
+          {!briefing && <button onClick={() => setBrief(null)} style={{ flex: "none", background: "transparent", border: "1px solid #3a4a5b", color: "#9aa6b2", cursor: "pointer", borderRadius: 2, width: 24, height: 24, fontSize: 12 }}>✕</button>}
+        </div>
+      )}
 
       {/* job banner */}
       <div style={{ background: "#1c2b3a", color: "#f4f3f0", padding: "20px 22px", display: "flex", alignItems: "center", gap: 30, flexWrap: "wrap", borderBottom: "1px solid #0e1820" }}>
