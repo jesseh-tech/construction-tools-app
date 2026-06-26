@@ -114,12 +114,12 @@ export type AppEntry = {
 // in-app path; `active` flips on as each tool gets built.
 export const APPS: AppEntry[] = [
   { id: "estimate", route: "/estimate", no: "01", name: "Estimate Worksheet", tag: "PRECONSTRUCTION", active: true, desc: "Unit-price takeoff across CSI divisions. The cost source of truth.", feeds: "Feeds every tool" },
-  { id: "sov", route: "/sov", no: "02", name: "Schedule of Values", tag: "PRECONSTRUCTION", active: false, desc: "AIA-style billing breakdown by division, built from the estimate.", feeds: "From Estimate" },
+  { id: "sov", route: "/sov", no: "02", name: "Schedule of Values", tag: "PRECONSTRUCTION", active: true, desc: "AIA-style billing breakdown by division, built from the estimate.", feeds: "From Estimate" },
   { id: "proposal", route: "/proposal", no: "03", name: "Bid Proposal", tag: "PRECONSTRUCTION", active: false, desc: "Client-facing proposal & cover sheet, priced from the estimate.", feeds: "From Estimate" },
   { id: "leveling", route: "/bid-leveling", no: "04", name: "Bid Leveling", tag: "PRECONSTRUCTION", active: false, desc: "Compare subcontractor bids side by side and spot scope gaps.", feeds: "Standalone" },
   { id: "takeoff", route: "/takeoff", no: "05", name: "Quantity Takeoff", tag: "PRECONSTRUCTION", active: false, desc: "Calculate material quantities and push them into the estimate.", feeds: "To Estimate" },
-  { id: "changeorders", route: "/change-orders", no: "06", name: "Change Order Log", tag: "PROJECT CONTROLS", active: false, desc: "Track COs and adjust the contract value live.", feeds: "Adjusts contract" },
-  { id: "payapp", route: "/pay-app", no: "07", name: "Pay Application", tag: "PROJECT CONTROLS", active: false, desc: "G702/G703 monthly draw with retainage, from SOV + change orders.", feeds: "From SOV + COs" },
+  { id: "changeorders", route: "/change-orders", no: "06", name: "Change Order Log", tag: "PROJECT CONTROLS", active: true, desc: "Track COs and adjust the contract value live.", feeds: "Adjusts contract" },
+  { id: "payapp", route: "/pay-app", no: "07", name: "Pay Application", tag: "PROJECT CONTROLS", active: true, desc: "G702/G703 monthly draw with retainage, from SOV + change orders.", feeds: "From SOV + COs" },
   { id: "submittals", route: "/submittals", no: "08", name: "Submittals & RFIs", tag: "PROJECT CONTROLS", active: false, desc: "Log submittals and RFIs with status and ball-in-court.", feeds: "Standalone" },
   { id: "daily", route: "/daily-report", no: "09", name: "Daily Field Report", tag: "FIELD", active: false, desc: "Weather, crew, work performed and photos from the field.", feeds: "Standalone" },
 ];
@@ -195,6 +195,34 @@ export function money(v: number, cents = false): string {
 }
 export const money0 = (v: number) => money(v, false);
 export const money2 = (v: number) => money(v, true);
+
+// ---- billing (SOV + Pay App share this) ----
+// Scheduled values are the estimate's division subtotals grossed up to the total
+// bid price (cost + markups). % complete per division builds the draw.
+export type SovRow = { id: string; code: string; name: string; sched: number; pct: number; completed: number; balance: number; retain: number };
+export type Sov = { rows: SovRow[]; schedTotal: number; completedTotal: number; retainTotal: number; balanceTotal: number; pctBilled: number };
+
+export function sov(job: Job, c: Computed = compute(job)): Sov {
+  const ratio = c.direct > 0 ? c.total / c.direct : 1;
+  const retPct = n(job.billing.retainage);
+  let completedTotal = 0, retainTotal = 0;
+  const rows: SovRow[] = c.divisions.map((d) => {
+    const id = d.ref.id;
+    const sched = d.subtotal * ratio;
+    let pct = n(job.billing.pct[id]);
+    pct = Math.max(0, Math.min(100, pct));
+    const completed = (sched * pct) / 100;
+    const retain = (completed * retPct) / 100;
+    completedTotal += completed;
+    retainTotal += retain;
+    return { id, code: d.code, name: d.name, sched, pct, completed, balance: sched - completed, retain };
+  });
+  return {
+    rows, schedTotal: c.total, completedTotal, retainTotal,
+    balanceTotal: c.total - completedTotal,
+    pctBilled: c.total > 0 ? (completedTotal / c.total) * 100 : 0,
+  };
+}
 
 // ---- seed (Westgate Tower demo) ----
 let _sid = 0;
