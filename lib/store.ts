@@ -47,6 +47,10 @@ export type BlScope = { id: string; label: string };
 export type BlSub = { id: string; name: string; prices: Record<string, string> };
 export type BidLeveling = { trade: string; scope: BlScope[]; subs: BlSub[] };
 
+export type TrackItem = { id: string; refNo: string; title: string; court: string; due: string; status: string };
+export type Crew = { id: string; company: string; count: string; hours: string };
+export type DailyReport = { id: string; date: string; weather: string; temp: string; delays: string; crews: Crew[]; work: string; notes: string };
+
 export type Job = {
   meta: Meta;
   markups: Markups;
@@ -56,9 +60,9 @@ export type Job = {
   payapp: { appNo: string; periodTo: string; priorPct: number };
   proposal: Proposal;
   bidLeveling: BidLeveling | null;
-  rfis: unknown[];
-  submittals: unknown[];
-  dailyReports: unknown[];
+  rfis: TrackItem[];
+  submittals: TrackItem[];
+  dailyReports: DailyReport[];
 };
 
 export const proposalDefaults = (): Proposal => ({
@@ -157,8 +161,8 @@ export const APPS: AppEntry[] = [
   { id: "takeoff", route: "/takeoff", no: "05", name: "Quantity Takeoff", tag: "PRECONSTRUCTION", active: true, desc: "Calculate material quantities and push them into the estimate.", feeds: "To Estimate" },
   { id: "changeorders", route: "/change-orders", no: "06", name: "Change Order Log", tag: "PROJECT CONTROLS", active: true, desc: "Track COs and adjust the contract value live.", feeds: "Adjusts contract" },
   { id: "payapp", route: "/pay-app", no: "07", name: "Pay Application", tag: "PROJECT CONTROLS", active: true, desc: "G702/G703 monthly draw with retainage, from SOV + change orders.", feeds: "From SOV + COs" },
-  { id: "submittals", route: "/submittals", no: "08", name: "Submittals & RFIs", tag: "PROJECT CONTROLS", active: false, desc: "Log submittals and RFIs with status and ball-in-court.", feeds: "Standalone" },
-  { id: "daily", route: "/daily-report", no: "09", name: "Daily Field Report", tag: "FIELD", active: false, desc: "Weather, crew, work performed and photos from the field.", feeds: "Standalone" },
+  { id: "submittals", route: "/submittals", no: "08", name: "Submittals & RFIs", tag: "PROJECT CONTROLS", active: true, desc: "Log submittals and RFIs with status and ball-in-court.", feeds: "Standalone" },
+  { id: "daily", route: "/daily-report", no: "09", name: "Daily Field Report", tag: "FIELD", active: true, desc: "Weather, crew, work performed and photos from the field.", feeds: "Standalone" },
 ];
 
 // ---- math ----
@@ -333,8 +337,15 @@ export function seedJob(): Job {
     payapp: { appNo: "3", periodTo: "2026-06-30", priorPct: 0.62 },
     proposal: proposalDefaults(),
     bidLeveling: bidLevelingDefaults(),
-    rfis: [],
-    submittals: [],
+    submittals: [
+      { id: newId(), refNo: "SUB-001", title: "Storefront aluminum & glazing shop drawings", court: "Architect", due: "2026-05-20", status: "Under Review" },
+      { id: newId(), refNo: "SUB-002", title: "Carpet tile & LVT samples", court: "Owner", due: "2026-05-10", status: "Approved" },
+      { id: newId(), refNo: "SUB-003", title: "Light fixture cut sheets — 2x2 LED", court: "GC", due: "2026-05-02", status: "Revise & Resubmit" },
+    ],
+    rfis: [
+      { id: newId(), refNo: "RFI-001", title: "Conflict: VAV box vs. structural beam at gridline C", court: "Engineer", due: "2026-05-08", status: "Open" },
+      { id: newId(), refNo: "RFI-002", title: "Confirm finish floor elevation at break room", court: "Architect", due: "2026-05-22", status: "Answered" },
+    ],
     dailyReports: [],
   };
 }
