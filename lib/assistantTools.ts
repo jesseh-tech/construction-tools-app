@@ -119,6 +119,8 @@ function clone(job: Job): Job {
     changeOrders: job.changeOrders.map((c) => ({ ...c })),
     billing: { retainage: job.billing.retainage, pct: { ...job.billing.pct } },
     payapp: { ...job.payapp },
+    proposal: { ...job.proposal },
+    bidLeveling: job.bidLeveling,
     rfis: [...job.rfis],
     submittals: [...job.submittals],
     dailyReports: [...job.dailyReports],

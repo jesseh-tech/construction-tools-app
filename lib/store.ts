@@ -42,6 +42,11 @@ export type ChangeOrder = {
   amount: number;
 };
 
+export type Proposal = { date: string; validDays: string; preparedBy: string; intro: string; inclusions: string; exclusions: string };
+export type BlScope = { id: string; label: string };
+export type BlSub = { id: string; name: string; prices: Record<string, string> };
+export type BidLeveling = { trade: string; scope: BlScope[]; subs: BlSub[] };
+
 export type Job = {
   meta: Meta;
   markups: Markups;
@@ -49,10 +54,42 @@ export type Job = {
   changeOrders: ChangeOrder[];
   billing: { retainage: number; pct: Record<string, number> };
   payapp: { appNo: string; periodTo: string; priorPct: number };
+  proposal: Proposal;
+  bidLeveling: BidLeveling | null;
   rfis: unknown[];
   submittals: unknown[];
   dailyReports: unknown[];
 };
+
+export const proposalDefaults = (): Proposal => ({
+  date: "",
+  validDays: "30",
+  preparedBy: "Estimating Department",
+  intro:
+    "10 Cent Investments is pleased to submit the following lump-sum proposal for the above-referenced commercial tenant improvement. The pricing below is based on the drawings and specifications available at time of bid and reflects a complete scope across the CSI divisions noted.",
+  inclusions:
+    "• All labor, material, equipment & supervision for the divisions listed\n• General conditions, project management & cleanup\n• Builder's risk and general liability insurance\n• Permits as required by jurisdiction\n• One-year workmanship warranty",
+  exclusions:
+    "• Hazardous material abatement or testing\n• Owner-furnished furniture, fixtures & equipment\n• After-hours / overtime work unless noted\n• Off-site improvements & utility company fees\n• Design & engineering fees",
+});
+
+export function bidLevelingDefaults(): BidLeveling {
+  const s1 = newId(), s2 = newId(), s3 = newId(), s4 = newId();
+  return {
+    trade: "Division 09 — Drywall, ACT & Paint",
+    scope: [
+      { id: s1, label: "Metal-stud framing & GWB partitions" },
+      { id: s2, label: "Acoustical ceiling — grid & tile" },
+      { id: s3, label: "Tape, finish & paint" },
+      { id: s4, label: "Mobilization, GC's & cleanup" },
+    ],
+    subs: [
+      { id: newId(), name: "Summit Interiors", prices: { [s1]: "48200", [s2]: "22400", [s3]: "31600", [s4]: "8500" } },
+      { id: newId(), name: "Front Range Drywall", prices: { [s1]: "45800", [s2]: "24100", [s3]: "29900", [s4]: "7200" } },
+      { id: newId(), name: "Apex Wall Systems", prices: { [s1]: "51000", [s2]: "21800", [s3]: "33200", [s4]: "" } },
+    ],
+  };
+}
 
 export const UNITS = ["EA", "SF", "LF", "SY", "CY", "LS", "HR", "TON", "LB", "GAL"] as const;
 
@@ -115,9 +152,9 @@ export type AppEntry = {
 export const APPS: AppEntry[] = [
   { id: "estimate", route: "/estimate", no: "01", name: "Estimate Worksheet", tag: "PRECONSTRUCTION", active: true, desc: "Unit-price takeoff across CSI divisions. The cost source of truth.", feeds: "Feeds every tool" },
   { id: "sov", route: "/sov", no: "02", name: "Schedule of Values", tag: "PRECONSTRUCTION", active: true, desc: "AIA-style billing breakdown by division, built from the estimate.", feeds: "From Estimate" },
-  { id: "proposal", route: "/proposal", no: "03", name: "Bid Proposal", tag: "PRECONSTRUCTION", active: false, desc: "Client-facing proposal & cover sheet, priced from the estimate.", feeds: "From Estimate" },
-  { id: "leveling", route: "/bid-leveling", no: "04", name: "Bid Leveling", tag: "PRECONSTRUCTION", active: false, desc: "Compare subcontractor bids side by side and spot scope gaps.", feeds: "Standalone" },
-  { id: "takeoff", route: "/takeoff", no: "05", name: "Quantity Takeoff", tag: "PRECONSTRUCTION", active: false, desc: "Calculate material quantities and push them into the estimate.", feeds: "To Estimate" },
+  { id: "proposal", route: "/proposal", no: "03", name: "Bid Proposal", tag: "PRECONSTRUCTION", active: true, desc: "Client-facing proposal & cover sheet, priced from the estimate.", feeds: "From Estimate" },
+  { id: "leveling", route: "/bid-leveling", no: "04", name: "Bid Leveling", tag: "PRECONSTRUCTION", active: true, desc: "Compare subcontractor bids side by side and spot scope gaps.", feeds: "Standalone" },
+  { id: "takeoff", route: "/takeoff", no: "05", name: "Quantity Takeoff", tag: "PRECONSTRUCTION", active: true, desc: "Calculate material quantities and push them into the estimate.", feeds: "To Estimate" },
   { id: "changeorders", route: "/change-orders", no: "06", name: "Change Order Log", tag: "PROJECT CONTROLS", active: true, desc: "Track COs and adjust the contract value live.", feeds: "Adjusts contract" },
   { id: "payapp", route: "/pay-app", no: "07", name: "Pay Application", tag: "PROJECT CONTROLS", active: true, desc: "G702/G703 monthly draw with retainage, from SOV + change orders.", feeds: "From SOV + COs" },
   { id: "submittals", route: "/submittals", no: "08", name: "Submittals & RFIs", tag: "PROJECT CONTROLS", active: false, desc: "Log submittals and RFIs with status and ball-in-court.", feeds: "Standalone" },
@@ -294,6 +331,8 @@ export function seedJob(): Job {
     ],
     billing: { retainage: 5.0, pct },
     payapp: { appNo: "3", periodTo: "2026-06-30", priorPct: 0.62 },
+    proposal: proposalDefaults(),
+    bidLeveling: bidLevelingDefaults(),
     rfis: [],
     submittals: [],
     dailyReports: [],
