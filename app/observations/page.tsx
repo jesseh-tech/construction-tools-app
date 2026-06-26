@@ -2,6 +2,7 @@
 
 import { useProject } from "../ProjectProvider";
 import { ToolBar, ToolBarButton } from "../ToolBar";
+import { AddRow } from "../AddControls";
 import { type Observation, newId } from "@/lib/store";
 
 const ACCENT = "#f5a623";
@@ -85,6 +86,7 @@ export default function ObservationsPage() {
             })}
           </div>
         </div>
+        <AddRow label="+ Log an observation" onClick={add} />
         <div style={{ marginTop: 14, fontFamily: "'JetBrains Mono'", fontSize: 11, color: "#8a8578" }}>Log field observations — safety hazards, quality issues, warranty items. Safety observations are flagged red. Ask the assistant to log one.</div>
       </div>
     </div>

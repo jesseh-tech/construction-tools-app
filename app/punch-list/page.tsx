@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useProject } from "../ProjectProvider";
 import { ToolBar, ToolBarButton } from "../ToolBar";
+import { AddRow } from "../AddControls";
 import { type PunchItem, newId } from "@/lib/store";
 
 const ACCENT = "#f5a623";
@@ -125,6 +126,7 @@ export default function PunchListPage() {
             })}
           </div>
         </div>
+        <AddRow label="+ Add a punch item" onClick={addItem} />
         <div style={{ marginTop: 14, fontFamily: "'JetBrains Mono'", fontSize: 11, color: "#8a8578", lineHeight: 1.6 }}>Track closeout deficiencies by location, trade and assignee. Items past their due date while still open are flagged <b style={{ color: "#b3402f" }}>overdue</b>. Try the assistant: &ldquo;add a punch item — cracked tile in the lobby, assign to the tile sub.&rdquo;</div>
       </div>
     </div>

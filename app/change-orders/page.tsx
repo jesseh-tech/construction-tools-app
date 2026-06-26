@@ -2,6 +2,7 @@
 
 import { useProject } from "../ProjectProvider";
 import { ToolBar, ToolBarButton } from "../ToolBar";
+import { AddRow } from "../AddControls";
 import { type ChangeOrder, compute, money0, newId } from "@/lib/store";
 
 const ACCENT = "#f5a623";
@@ -103,6 +104,7 @@ export default function ChangeOrdersPage() {
             <div style={{ width: 46, flex: "none" }} />
           </div>
         </div>
+        <AddRow label="+ New change order" onClick={addCO} />
         <div style={{ marginTop: 14, fontFamily: "'JetBrains Mono'", fontSize: 11, color: "#8a8578", lineHeight: 1.6 }}>Only <b>approved</b> change orders adjust the contract value. The revised contract flows to the dashboard and pay application; pending items are tracked but not yet billed.</div>
       </div>
     </div>

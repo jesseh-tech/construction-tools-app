@@ -49,6 +49,9 @@ body {
 .tile { transition: transform .12s ease, border-color .12s ease; }
 .tile:hover { border-color: #f5a623; transform: translateY(-2px); }
 
+/* Persistent "add" bar */
+.add-row:hover { border-color: #f5a623 !important; color: #f5a623; background: #fffdf8; }
+
 /* Print: drop nav/buttons/assistant so PDFs are clean */
 @media print {
   .noprint { display: none !important; }

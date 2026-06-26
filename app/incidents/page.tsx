@@ -2,6 +2,7 @@
 
 import { useProject } from "../ProjectProvider";
 import { ToolBar, ToolBarButton } from "../ToolBar";
+import { AddRow } from "../AddControls";
 import { type Incident, newId } from "@/lib/store";
 
 const ACCENT = "#f5a623";
@@ -98,6 +99,7 @@ export default function IncidentsPage() {
             })}
           </div>
         </div>
+        <AddRow label="+ Log an incident" onClick={add} />
         <div style={{ marginTop: 14, fontFamily: "'JetBrains Mono'", fontSize: 11, color: "#8a8578" }}>Document safety incidents with type, severity and status. &ldquo;Recordable&rdquo; and high-severity items are flagged red for OSHA tracking.</div>
       </div>
     </div>

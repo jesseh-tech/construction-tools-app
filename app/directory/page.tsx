@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useProject } from "../ProjectProvider";
 import { ToolBar, ToolBarButton } from "../ToolBar";
+import { AddRow } from "../AddControls";
 import { type Contact, newId } from "@/lib/store";
 
 const ACCENT = "#f5a623";
@@ -84,6 +85,7 @@ export default function DirectoryPage() {
             ))}
           </div>
         </div>
+        <AddRow label="+ Add a contact" onClick={addItem} />
         <div style={{ marginTop: 14, fontFamily: "'JetBrains Mono'", fontSize: 11, color: "#8a8578", lineHeight: 1.6 }}>Your project contacts — owner, architect, engineers, subcontractors and vendors. Ask the assistant to add one: &ldquo;add a contact — Summit Interiors, drywall sub.&rdquo;</div>
       </div>
     </div>

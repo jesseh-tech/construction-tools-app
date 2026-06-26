@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useProject } from "../ProjectProvider";
 import { ToolBar, ToolBarButton } from "../ToolBar";
+import { AddRow } from "../AddControls";
 import { type TrackItem, newId } from "@/lib/store";
 
 const ACCENT = "#f5a623";
@@ -111,6 +112,7 @@ export default function SubmittalsPage() {
             );
           })}
         </div>
+        <AddRow label={`+ New ${isSub ? "submittal" : "RFI"}`} onClick={addItem} />
         <div style={{ marginTop: 14, fontFamily: "'JetBrains Mono'", fontSize: 11, color: "#8a8578", lineHeight: 1.6 }}>Track {isSub ? "submittals" : "RFIs"} with ball-in-court and due dates. Rows past their due date while still open are flagged <b style={{ color: "#b3402f" }}>overdue</b>. Switch tabs to manage submittals and RFIs separately.</div>
       </div>
     </div>

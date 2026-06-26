@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useProject } from "../ProjectProvider";
 import { ToolBar, ToolBarButton } from "../ToolBar";
+import { AddRow } from "../AddControls";
 import { type Task, newId } from "@/lib/store";
 
 const ACCENT = "#f5a623";
@@ -83,6 +84,7 @@ export default function TasksPage() {
             })}
           </div>
         </div>
+        <AddRow label="+ Add a task" onClick={add} />
         <div style={{ marginTop: 14, fontFamily: "'JetBrains Mono'", fontSize: 11, color: "#8a8578" }}>Action items and to-dos. Ask the assistant: &ldquo;add a task to order door hardware, assign to the PM, high priority.&rdquo;</div>
       </div>
     </div>
