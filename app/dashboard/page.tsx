@@ -10,7 +10,7 @@ import { type FileRec, filesAll, filesAdd, filesDelete, filesGet, fileExt, fileS
 const ACCENT = "#f5a623";
 
 export default function DashboardPage() {
-  const { job, reset } = useProject();
+  const { job, reset, projects, currentId, switchProject, newProject, deleteProject } = useProject();
   const c = compute(job);
   const [files, setFiles] = useState<FileRec[]>([]);
   const [dragging, setDragging] = useState(false);
@@ -97,6 +97,27 @@ export default function DashboardPage() {
             <div style={{ fontFamily: "'JetBrains Mono'", fontWeight: 700, fontSize: 30, color: ACCENT, lineHeight: 1, marginTop: 2 }}>{activeCount}</div>
           </div>
         </div>
+      </div>
+
+      {/* project switcher */}
+      <div style={{ background: "#0e1a24", color: "#9aa6b2", padding: "10px 22px", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", borderBottom: "1px solid #0e1820" }}>
+        <span style={{ fontFamily: "'Barlow Condensed'", fontWeight: 700, fontSize: 11, letterSpacing: "0.16em", textTransform: "uppercase", color: "#7f8c99" }}>Project</span>
+        <select
+          value={currentId}
+          onChange={(e) => switchProject(e.target.value)}
+          style={{ background: "#15212d", color: "#f4f3f0", border: "1px solid #314252", fontFamily: "'Barlow'", fontWeight: 600, fontSize: 13, padding: "6px 10px", borderRadius: 2, outline: "none", cursor: "pointer", maxWidth: 360 }}
+        >
+          {projects.map((p) => (<option key={p.id} value={p.id}>{p.name}</option>))}
+        </select>
+        <span style={{ fontFamily: "'JetBrains Mono'", fontSize: 10, color: "#5e6b78" }}>{projects.length} job{projects.length === 1 ? "" : "s"}</span>
+        <div style={{ flex: 1 }} />
+        <button onClick={newProject} style={{ background: ACCENT, border: "none", color: "#15212d", fontFamily: "'Barlow Condensed'", fontWeight: 700, fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", padding: "6px 12px", cursor: "pointer", borderRadius: 2 }}>+ New Project</button>
+        <button
+          onClick={() => { if (window.confirm(`Delete project "${job.meta.name}"? This can't be undone.`)) deleteProject(currentId); }}
+          style={{ background: "transparent", border: "1px solid #3a4a5b", color: "#9aa6b2", fontFamily: "'Barlow Condensed'", fontWeight: 700, fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", padding: "6px 12px", cursor: "pointer", borderRadius: 2 }}
+        >
+          Delete
+        </button>
       </div>
 
       {/* job banner */}

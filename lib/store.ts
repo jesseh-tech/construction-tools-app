@@ -352,3 +352,20 @@ export function seedJob(): Job {
 
 export const newId = (): string =>
   typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `c${Math.random().toString(36).slice(2)}`;
+
+// A clean, empty job for starting a brand-new project.
+export function blankJob(): Job {
+  return {
+    meta: { name: "New Project", client: "", bidNo: "", location: "", sf: 0, dueLabel: "" },
+    markups: { ins: 2.5, oh: 8.0, cont: 5.0, profit: 10.0 },
+    divisions: [],
+    changeOrders: [],
+    billing: { retainage: 5.0, pct: {} },
+    payapp: { appNo: "1", periodTo: "", priorPct: 0 },
+    proposal: proposalDefaults(),
+    bidLeveling: bidLevelingDefaults(),
+    submittals: [],
+    rfis: [],
+    dailyReports: [],
+  };
+}

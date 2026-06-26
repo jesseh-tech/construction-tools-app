@@ -72,7 +72,7 @@ export default function EstimatePage() {
   return (
     <div className="est" style={{ minHeight: "100vh", background: "#e7e5df" }}>
       {/* TOP APP BAR */}
-      <div style={{ position: "sticky", top: 0, zIndex: 60, display: "flex", alignItems: "stretch", height: 74, background: "#15212d", color: "#f4f3f0", borderBottom: `3px solid ${ACCENT}` }}>
+      <div className="noprint" style={{ position: "sticky", top: 0, zIndex: 60, display: "flex", alignItems: "stretch", height: 74, background: "#15212d", color: "#f4f3f0", borderBottom: `3px solid ${ACCENT}` }}>
         <Link href="/dashboard" style={{ display: "flex", alignItems: "center", gap: 13, padding: "0 22px", borderRight: "1px solid rgba(255,255,255,0.08)", flex: "none", textDecoration: "none", color: "inherit" }}>
           <Image src="/brand/10cent-icon.png" alt="10 Cent Investments" width={46} height={46} style={{ objectFit: "contain" }} />
           <div style={{ lineHeight: 0.94 }}>

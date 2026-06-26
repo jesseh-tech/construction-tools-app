@@ -126,14 +126,14 @@ export function AssistantWidget() {
     <>
       <button
         onClick={() => setOpen((o) => !o)}
-        className="fixed bottom-5 right-5 z-50 rounded-full bg-[#15212d] px-5 py-3 font-semibold text-white shadow-lg hover:bg-[#1d2c3b] focus:outline-none focus:ring-2 focus:ring-[#f5a623]"
+        className="noprint fixed bottom-5 right-5 z-50 rounded-full bg-[#15212d] px-5 py-3 font-semibold text-white shadow-lg hover:bg-[#1d2c3b] focus:outline-none focus:ring-2 focus:ring-[#f5a623]"
         aria-label="Toggle assistant"
       >
         {open ? "Close" : "💬 Assistant"}
       </button>
 
       {open && (
-        <div className="fixed bottom-20 right-5 z-50 flex h-[28rem] w-[22rem] flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl">
+        <div className="noprint fixed bottom-20 right-5 z-50 flex h-[28rem] w-[22rem] flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl">
           <div className="flex items-center gap-2 border-b border-gray-200 bg-[#15212d] px-4 py-3 text-white">
             <span className="font-semibold">Project Assistant</span>
             {listening ? (
