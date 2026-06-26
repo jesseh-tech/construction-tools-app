@@ -58,6 +58,8 @@ export default function DashboardPage() {
     if (app.id === "tasks") return { stat: String(job.tasks.filter((t) => t.status !== "Done").length), label: "OPEN TASKS" };
     if (app.id === "observations") return { stat: String(job.observations.filter((o) => o.status === "Open").length), label: "OPEN" };
     if (app.id === "incidents") return { stat: String(job.incidents.length), label: "INCIDENTS" };
+    if (app.id === "meetings") return { stat: String(job.meetings.reduce((a, m) => a + m.actions.filter((x) => !x.done).length, 0)), label: "OPEN ACTIONS" };
+    if (app.id === "schedule") return { stat: `${job.milestones.filter((m) => m.status === "Complete").length}/${job.milestones.length}`, label: "MILESTONES" };
     return { stat: app.active ? "READY" : "SOON", label: "STATUS" };
   };
 

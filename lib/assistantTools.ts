@@ -2,7 +2,7 @@
 // executor that applies a tool call and returns the new job.
 import type Anthropic from "@anthropic-ai/sdk";
 import { randomUUID } from "node:crypto";
-import { type Job, type Division, type LineItem, type TrackItem, type DailyReport, type Crew, type Proposal, type PunchItem, type Contact, type Commitment, type Inspection, type ChecklistItem, type Task, type Observation, type Incident, UNITS, CSI_CATALOG, csiName, bidLevelingDefaults } from "./store";
+import { type Job, type Division, type LineItem, type TrackItem, type DailyReport, type Crew, type Proposal, type PunchItem, type Contact, type Commitment, type Inspection, type ChecklistItem, type Task, type Observation, type Incident, type Meeting, type ActionItem, type Milestone, UNITS, CSI_CATALOG, csiName, bidLevelingDefaults } from "./store";
 
 const unitList = UNITS.join(", ");
 const csiList = CSI_CATALOG.map(([c, name]) => `${c} ${name}`).join("; ");
@@ -348,6 +348,36 @@ export const tools: Anthropic.Tool[] = [
       required: ["description"],
     },
   },
+  {
+    name: "add_meeting",
+    description: "Create a meeting record with attendees, notes, and action items.",
+    input_schema: {
+      type: "object",
+      properties: {
+        title: { type: "string" },
+        date: { type: "string", description: "YYYY-MM-DD; defaults to today." },
+        attendees: { type: "string" },
+        notes: { type: "string" },
+        actions: { type: "array", description: "Action items as plain strings.", items: { type: "string" } },
+      },
+      required: ["title"],
+    },
+  },
+  {
+    name: "add_milestone",
+    description: "Add a schedule milestone or phase with start/end dates.",
+    input_schema: {
+      type: "object",
+      properties: {
+        title: { type: "string" },
+        start: { type: "string", description: "YYYY-MM-DD." },
+        end: { type: "string", description: "YYYY-MM-DD." },
+        phase: { type: "string", description: "e.g. Preconstruction, Construction, Closeout." },
+        status: { type: "string", enum: ["Not Started", "In Progress", "Complete"] },
+      },
+      required: ["title"],
+    },
+  },
 ];
 
 type ToolInput = Record<string, unknown>;
@@ -377,6 +407,8 @@ function clone(job: Job): Job {
     tasks: [...job.tasks],
     observations: [...job.observations],
     incidents: [...job.incidents],
+    meetings: [...job.meetings],
+    milestones: [...job.milestones],
   };
 }
 
@@ -673,6 +705,33 @@ export function applyToolUse(job: Job, name: string, input: ToolInput): { job: J
       };
       j.incidents = [...j.incidents, inc];
       return { job: j, result: `Logged ${inc.number} (${inc.type}, ${inc.severity}).` };
+    }
+    case "add_meeting": {
+      const actionsIn = Array.isArray(input.actions) ? (input.actions as unknown[]) : [];
+      const actions: ActionItem[] = actionsIn.map((t) => ({ id: randomUUID(), text: str(t), owner: "", done: false }));
+      const meeting: Meeting = {
+        id: randomUUID(),
+        title: str(input.title, "Meeting"),
+        date: str(input.date) || new Date().toISOString().slice(0, 10),
+        attendees: str(input.attendees),
+        notes: str(input.notes),
+        actions,
+      };
+      j.meetings = [meeting, ...j.meetings];
+      return { job: j, result: `Created meeting "${meeting.title}" with ${actions.length} action item${actions.length === 1 ? "" : "s"}.` };
+    }
+    case "add_milestone": {
+      const status = ["Not Started", "In Progress", "Complete"].includes(str(input.status)) ? str(input.status) : "Not Started";
+      const ms: Milestone = {
+        id: randomUUID(),
+        title: str(input.title),
+        start: str(input.start),
+        end: str(input.end) || str(input.start),
+        status: status as Milestone["status"],
+        phase: str(input.phase, "Construction"),
+      };
+      j.milestones = [...j.milestones, ms];
+      return { job: j, result: `Added milestone "${ms.title}".` };
     }
     default:
       return { job: j, result: `Unknown tool: ${name}.` };

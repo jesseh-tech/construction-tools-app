@@ -62,6 +62,10 @@ export type Task = { id: string; title: string; assignee: string; due: string; p
 export type Observation = { id: string; number: string; type: "Safety" | "Quality" | "Commissioning" | "Warranty" | "Environmental"; title: string; location: string; assignee: string; date: string; status: "Open" | "Closed" };
 export type Incident = { id: string; number: string; date: string; type: "Injury" | "Near Miss" | "Property Damage" | "Environmental"; severity: "Low" | "Medium" | "High" | "Recordable"; description: string; location: string; reportedBy: string; status: "Open" | "Under Review" | "Closed" };
 
+export type ActionItem = { id: string; text: string; owner: string; done: boolean };
+export type Meeting = { id: string; title: string; date: string; attendees: string; notes: string; actions: ActionItem[] };
+export type Milestone = { id: string; title: string; start: string; end: string; status: "Not Started" | "In Progress" | "Complete"; phase: string };
+
 export type Job = {
   meta: Meta;
   markups: Markups;
@@ -81,6 +85,8 @@ export type Job = {
   tasks: Task[];
   observations: Observation[];
   incidents: Incident[];
+  meetings: Meeting[];
+  milestones: Milestone[];
 };
 
 export const proposalDefaults = (): Proposal => ({
@@ -188,6 +194,9 @@ export const APPS: AppEntry[] = [
   { id: "tasks", route: "/tasks", no: "14", name: "Tasks", tag: "PROJECT CONTROLS", active: true, desc: "Action items and to-dos with owner, due date and status.", feeds: "Coordination" },
   { id: "observations", route: "/observations", no: "15", name: "Observations", tag: "QUALITY & CLOSEOUT", active: true, desc: "Log safety & quality observations from the field.", feeds: "Quality & safety" },
   { id: "incidents", route: "/incidents", no: "16", name: "Incident Reports", tag: "QUALITY & CLOSEOUT", active: true, desc: "Injuries, near-misses and property damage with severity.", feeds: "Safety" },
+  { id: "meetings", route: "/meetings", no: "17", name: "Meetings", tag: "PROJECT CONTROLS", active: true, desc: "Meeting minutes with attendees, notes and action items.", feeds: "Coordination" },
+  { id: "schedule", route: "/schedule", no: "18", name: "Schedule", tag: "PROJECT CONTROLS", active: true, desc: "Project milestones and phases on a visual timeline.", feeds: "Timeline" },
+  { id: "photos", route: "/photos", no: "19", name: "Photos", tag: "FIELD", active: true, desc: "Field photo gallery with captions and locations.", feeds: "Field" },
 ];
 
 // ---- math ----
@@ -403,6 +412,19 @@ export function seedJob(): Job {
       { id: newId(), number: "OBS-002", type: "Quality", title: "GWB corner bead not fully seated", location: "Suite 410", assignee: "Summit Interiors", date: "2026-06-20", status: "Closed" },
     ],
     incidents: [],
+    meetings: [
+      { id: newId(), title: "Weekly OAC Meeting", date: "2026-06-24", attendees: "Owner, Architect, GC, Summit Interiors", notes: "Reviewed schedule, RFIs, and submittal log. Owner approved corridor flooring upgrade (CO-002 pending).", actions: [
+        { id: newId(), text: "Architect to respond to RFI-001 (beam conflict)", owner: "Architect", done: false },
+        { id: newId(), text: "GC to issue CO-002 for corridor tile", owner: "GC", done: false },
+      ] },
+    ],
+    milestones: [
+      { id: newId(), title: "Notice to Proceed", start: "2026-04-15", end: "2026-04-15", status: "Complete", phase: "Preconstruction" },
+      { id: newId(), title: "Demolition & abatement", start: "2026-04-20", end: "2026-05-05", status: "Complete", phase: "Construction" },
+      { id: newId(), title: "MEP rough-in", start: "2026-05-06", end: "2026-06-10", status: "In Progress", phase: "Construction" },
+      { id: newId(), title: "Drywall & finishes", start: "2026-06-11", end: "2026-07-20", status: "In Progress", phase: "Construction" },
+      { id: newId(), title: "Substantial completion", start: "2026-08-15", end: "2026-08-15", status: "Not Started", phase: "Closeout" },
+    ],
   };
 }
 
@@ -438,6 +460,8 @@ export function normalizeJob(input: unknown): Job {
     tasks: arr(j.tasks, []),
     observations: arr(j.observations, []),
     incidents: arr(j.incidents, []),
+    meetings: arr(j.meetings, []),
+    milestones: arr(j.milestones, []),
   };
 }
 
@@ -462,5 +486,7 @@ export function blankJob(): Job {
     tasks: [],
     observations: [],
     incidents: [],
+    meetings: [],
+    milestones: [],
   };
 }
