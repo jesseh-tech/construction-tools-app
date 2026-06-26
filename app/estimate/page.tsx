@@ -261,7 +261,7 @@ export default function EstimatePage() {
                 ))}
 
                 <div style={{ display: "flex", alignItems: "stretch", background: "#eceae3", borderTop: "2px solid #1c2b3a" }}>
-                  <div style={{ flex: 1, minWidth: 240, display: "flex", alignItems: "center", justifyContent: "flex-end", paddingRight: 14, fontFamily: "'Barlow Condensed'", fontWeight: 700, fontSize: 12, letterSpacing: "0.08em", textTransform: "uppercase", color: "#1c2b3a" }}>Div {grp.code} · {grp.name} — Subtotal</div>
+                  <div style={{ flex: 1, minWidth: 240, display: "flex", alignItems: "center", justifyContent: "flex-end", paddingRight: 14, fontFamily: "'Barlow Condensed'", fontWeight: 700, fontSize: 12, letterSpacing: "0.08em", textTransform: "uppercase", color: "#1c2b3a", whiteSpace: "nowrap", overflow: "hidden" }} title={`Div ${grp.code} · ${grp.name} — Subtotal`}>Div {grp.code} · {grp.name} — Subtotal</div>
                   <div style={{ width: 76, flex: "none", borderLeft: "1px solid #d8d5cc" }} />
                   <div style={{ width: 80, flex: "none", borderLeft: "1px solid #d8d5cc" }} />
                   <div style={subCol}>{money(dm)}</div>
