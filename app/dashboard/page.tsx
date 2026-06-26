@@ -111,8 +111,8 @@ export default function DashboardPage() {
   return (
     <div style={{ minHeight: "100vh", background: "#e7e5df", fontFamily: "'Barlow',sans-serif" }}>
       {/* top app bar */}
-      <div style={{ display: "flex", alignItems: "stretch", height: 74, background: "#15212d", color: "#f4f3f0", borderBottom: `3px solid ${ACCENT}` }}>
-        <Link href="/" style={{ display: "flex", alignItems: "center", gap: 13, padding: "0 22px", borderRight: "1px solid rgba(255,255,255,0.08)", flex: "none", textDecoration: "none", color: "inherit" }}>
+      <div style={{ display: "flex", alignItems: "stretch", height: 74, background: "#15212d", color: "#f4f3f0", borderBottom: `3px solid ${ACCENT}`, boxShadow: "0 4px 16px rgba(14, 24, 32, 0.22)" }}>
+        <Link href="/" className="tbar-link" style={{ display: "flex", alignItems: "center", gap: 13, padding: "0 22px", borderRight: "1px solid rgba(255,255,255,0.08)", flex: "none", textDecoration: "none", color: "inherit" }}>
           <Image src="/brand/10cent-lockup-white.png" alt="10 Cent Investments" width={46} height={46} style={{ objectFit: "contain" }} />
           <div style={{ lineHeight: 0.94 }}>
             <div style={{ fontFamily: "'Barlow Condensed'", fontWeight: 700, fontSize: 22, letterSpacing: "0.04em" }}>10 CENT</div>
@@ -210,9 +210,9 @@ export default function DashboardPage() {
         })()}
 
         <Section title="Preconstruction" sub="ESTIMATE · SOV · PROPOSAL · LEVELING · TAKEOFF" phase="PRECONSTRUCTION" />
-        <Section title="Project Controls" sub="CHANGE ORDERS · PAY APPS · SUBMITTALS" phase="PROJECT CONTROLS" />
-        <Section title="Field" sub="DAILY REPORTS" phase="FIELD" />
-        <Section title="Quality & Closeout" sub="PUNCH LIST · INSPECTIONS & SAFETY" phase="QUALITY & CLOSEOUT" />
+        <Section title="Project Controls" sub="CHANGE ORDERS · PAY APP · SUBMITTALS · TASKS · MEETINGS · SCHEDULE" phase="PROJECT CONTROLS" />
+        <Section title="Field" sub="DAILY REPORTS · PHOTOS" phase="FIELD" />
+        <Section title="Quality & Closeout" sub="PUNCH LIST · INSPECTIONS · OBSERVATIONS · INCIDENTS" phase="QUALITY & CLOSEOUT" />
 
         {/* project documents */}
         <div style={{ display: "flex", alignItems: "center", gap: 14, margin: "34px 0 14px" }}>
