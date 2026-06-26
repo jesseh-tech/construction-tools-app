@@ -2,7 +2,7 @@
 // executor that applies a tool call and returns the new job.
 import type Anthropic from "@anthropic-ai/sdk";
 import { randomUUID } from "node:crypto";
-import { type Job, type Division, type LineItem, type TrackItem, type DailyReport, type Crew, type Proposal, type PunchItem, UNITS, CSI_CATALOG, csiName, bidLevelingDefaults } from "./store";
+import { type Job, type Division, type LineItem, type TrackItem, type DailyReport, type Crew, type Proposal, type PunchItem, type Contact, UNITS, CSI_CATALOG, csiName, bidLevelingDefaults } from "./store";
 
 const unitList = UNITS.join(", ");
 const csiList = CSI_CATALOG.map(([c, name]) => `${c} ${name}`).join("; ");
@@ -258,6 +258,22 @@ export const tools: Anthropic.Tool[] = [
       required: ["number"],
     },
   },
+  {
+    name: "add_contact",
+    description: "Add a company/contact to the Project Directory (owner, architect, engineer, subcontractor, or vendor).",
+    input_schema: {
+      type: "object",
+      properties: {
+        company: { type: "string" },
+        name: { type: "string", description: "Contact person." },
+        role: { type: "string", description: "Role or trade." },
+        type: { type: "string", enum: ["Owner", "Architect", "Engineer", "General Contractor", "Subcontractor", "Vendor"] },
+        email: { type: "string" },
+        phone: { type: "string" },
+      },
+      required: ["company"],
+    },
+  },
 ];
 
 type ToolInput = Record<string, unknown>;
@@ -495,6 +511,20 @@ export function applyToolUse(job: Job, name: string, input: ToolInput): { job: J
       if (input.due !== undefined) patch.due = str(input.due);
       j.punchList = j.punchList.map((p) => (p.number === numRef ? { ...p, ...patch } : p));
       return { job: j, result: `Updated ${numRef}.` };
+    }
+    case "add_contact": {
+      const type = ["Owner", "Architect", "Engineer", "General Contractor", "Subcontractor", "Vendor"].includes(str(input.type)) ? str(input.type) : "Subcontractor";
+      const contact: Contact = {
+        id: randomUUID(),
+        company: str(input.company),
+        name: str(input.name),
+        role: str(input.role),
+        email: str(input.email),
+        phone: str(input.phone),
+        type: type as Contact["type"],
+      };
+      j.directory = [...j.directory, contact];
+      return { job: j, result: `Added ${contact.company || contact.name} to the directory (${contact.type}).` };
     }
     default:
       return { job: j, result: `Unknown tool: ${name}.` };
