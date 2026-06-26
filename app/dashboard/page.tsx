@@ -118,6 +118,34 @@ export default function DashboardPage() {
 
       {/* tool sections */}
       <div style={{ padding: "14px 22px 56px" }}>
+        {/* cost by division */}
+        {(() => {
+          const divs = c.divisions.filter((d) => d.subtotal > 0).sort((a, b) => b.subtotal - a.subtotal);
+          const max = divs[0]?.subtotal || 1;
+          if (divs.length === 0) return null;
+          return (
+            <>
+              <div style={{ display: "flex", alignItems: "center", gap: 14, margin: "24px 0 14px" }}>
+                <h2 style={{ margin: 0, fontFamily: "'Barlow Condensed'", fontWeight: 700, fontSize: 18, letterSpacing: "0.14em", textTransform: "uppercase", color: "#1c2b3a" }}>Cost by Division</h2>
+                <div style={{ flex: 1, height: 2, background: "#cfccc2" }} />
+                <span style={{ fontFamily: "'JetBrains Mono'", fontSize: 11, color: "#8a8578", letterSpacing: "0.05em" }}>DIRECT COST · {divs.length} DIVISIONS</span>
+              </div>
+              <div style={{ background: "#fff", border: "1px solid #d6d3cb", borderTop: `3px solid ${ACCENT}`, padding: "16px 20px", display: "flex", flexDirection: "column", gap: 9 }}>
+                {divs.map((d, i) => (
+                  <div key={d.ref.id} style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <span style={{ width: 34, flex: "none", fontFamily: "'JetBrains Mono'", fontWeight: 700, fontSize: 12, color: "#15212d", textAlign: "center", background: "#efeee9", borderRadius: 2, padding: "2px 0" }}>{d.code}</span>
+                    <span style={{ width: 150, flex: "none", fontFamily: "'Barlow'", fontWeight: 500, fontSize: 13, color: "#1c2b3a", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{d.name}</span>
+                    <div style={{ flex: 1, height: 18, background: "#f0eee8", borderRadius: 2, overflow: "hidden" }}>
+                      <div style={{ width: `${Math.max(2, (d.subtotal / max) * 100)}%`, height: "100%", background: i === 0 ? ACCENT : "#3a4a5b", transition: "width .3s ease" }} />
+                    </div>
+                    <span style={{ width: 96, flex: "none", textAlign: "right", fontFamily: "'JetBrains Mono'", fontWeight: 700, fontSize: 13, color: "#15212d" }}>{money0(d.subtotal)}</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          );
+        })()}
+
         <Section title="Preconstruction" sub="ESTIMATE · SOV · PROPOSAL · LEVELING · TAKEOFF" phase="PRECONSTRUCTION" />
         <Section title="Project Controls" sub="CHANGE ORDERS · PAY APPS · SUBMITTALS" phase="PROJECT CONTROLS" />
         <Section title="Field" sub="DAILY REPORTS" phase="FIELD" />
