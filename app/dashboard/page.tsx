@@ -214,7 +214,7 @@ export default function DashboardPage() {
 
         <Section title="Preconstruction" sub="ESTIMATE · SOV · PROPOSAL · LEVELING · TAKEOFF" phase="PRECONSTRUCTION" />
         <Section title="Project Controls" sub="BUDGET · CHANGE ORDERS · PAY APP · SUBMITTALS · TASKS · MEETINGS · SCHEDULE · TRANSMITTALS" phase="PROJECT CONTROLS" />
-        <Section title="Field" sub="DAILY REPORTS · TIMESHEETS · PHOTOS" phase="FIELD" />
+        <Section title="Field" sub="DAILY REPORTS · TIMESHEETS · PHOTOS · DRAWINGS" phase="FIELD" />
         <Section title="Quality & Closeout" sub="PUNCH LIST · INSPECTIONS · OBSERVATIONS · INCIDENTS" phase="QUALITY & CLOSEOUT" />
 
         {/* project documents */}

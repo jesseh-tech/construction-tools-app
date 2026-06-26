@@ -3,17 +3,21 @@
 const DB_NAME = "tencent.files.v1";
 const STORE = "files";
 const PHOTO_STORE = "photos";
+const DRAWING_STORE = "drawings";
 
 export type FileRec = { id: string; name: string; type: string; size: number; addedAt: number; blob: Blob; projectId?: string };
 export type PhotoRec = { id: string; projectId?: string; caption: string; location: string; addedAt: number; blob: Blob };
+export type DrawingPin = { id: string; x: number; y: number; note: string };
+export type DrawingRec = { id: string; projectId?: string; name: string; sheet: string; type: string; addedAt: number; blob: Blob; pins: DrawingPin[] };
 
 function openDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, 2);
+    const req = indexedDB.open(DB_NAME, 3);
     req.onupgradeneeded = () => {
       const db = req.result;
       if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE, { keyPath: "id" });
       if (!db.objectStoreNames.contains(PHOTO_STORE)) db.createObjectStore(PHOTO_STORE, { keyPath: "id" });
+      if (!db.objectStoreNames.contains(DRAWING_STORE)) db.createObjectStore(DRAWING_STORE, { keyPath: "id" });
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
@@ -138,6 +142,67 @@ export async function photoDelete(id: string): Promise<void> {
   return new Promise((res) => {
     const tx = db.transaction(PHOTO_STORE, "readwrite");
     tx.objectStore(PHOTO_STORE).delete(id);
+    tx.oncomplete = () => res();
+    tx.onerror = () => res();
+  });
+}
+
+// ---- Drawings / plans (separate IndexedDB store, with pin markups) ----
+export async function drawingsAdd(list: FileList | File[], projectId?: string): Promise<number> {
+  const arr = Array.from(list).filter((f) => f.type.startsWith("image/") || f.type === "application/pdf");
+  if (arr.length === 0) return 0;
+  const db = await openDB();
+  return new Promise((res, rej) => {
+    const tx = db.transaction(DRAWING_STORE, "readwrite");
+    const store = tx.objectStore(DRAWING_STORE);
+    arr.forEach((f) => store.put({ id: rid(), projectId, name: f.name.replace(/\.[a-z0-9]+$/i, ""), sheet: "", type: f.type || "", addedAt: Date.now(), blob: f, pins: [] }));
+    tx.oncomplete = () => res(arr.length);
+    tx.onerror = () => rej(tx.error);
+  });
+}
+
+export async function drawingsAll(projectId?: string): Promise<DrawingRec[]> {
+  try {
+    const db = await openDB();
+    return await new Promise<DrawingRec[]>((res, rej) => {
+      const out: DrawingRec[] = [];
+      const tx = db.transaction(DRAWING_STORE, "readonly");
+      const cur = tx.objectStore(DRAWING_STORE).openCursor();
+      cur.onsuccess = () => {
+        const c = cur.result;
+        if (c) {
+          const rec = c.value as DrawingRec;
+          if (!projectId || !rec.projectId || rec.projectId === projectId) out.push({ ...rec, pins: rec.pins ?? [] });
+          c.continue();
+        } else { out.sort((a, b) => b.addedAt - a.addedAt); res(out); }
+      };
+      cur.onerror = () => rej(cur.error);
+    });
+  } catch {
+    return [];
+  }
+}
+
+export async function drawingUpdate(id: string, patch: Partial<Pick<DrawingRec, "name" | "sheet" | "pins">>): Promise<void> {
+  const db = await openDB();
+  return new Promise((res) => {
+    const tx = db.transaction(DRAWING_STORE, "readwrite");
+    const store = tx.objectStore(DRAWING_STORE);
+    const rq = store.get(id);
+    rq.onsuccess = () => {
+      const rec = rq.result as DrawingRec | undefined;
+      if (rec) store.put({ ...rec, ...patch });
+    };
+    tx.oncomplete = () => res();
+    tx.onerror = () => res();
+  });
+}
+
+export async function drawingDelete(id: string): Promise<void> {
+  const db = await openDB();
+  return new Promise((res) => {
+    const tx = db.transaction(DRAWING_STORE, "readwrite");
+    tx.objectStore(DRAWING_STORE).delete(id);
     tx.oncomplete = () => res();
     tx.onerror = () => res();
   });

@@ -209,6 +209,7 @@ export const APPS: AppEntry[] = [
   { id: "budget", route: "/budget", no: "20", name: "Budget vs Actual", tag: "PROJECT CONTROLS", active: true, desc: "Budget, committed and actual cost by division with variance.", feeds: "Financials" },
   { id: "timesheets", route: "/timesheets", no: "21", name: "Timesheets", tag: "FIELD", active: true, desc: "Labor hours by worker, cost code and day.", feeds: "Field" },
   { id: "transmittals", route: "/transmittals", no: "22", name: "Transmittals", tag: "PROJECT CONTROLS", active: true, desc: "Log of documents and drawings sent out.", feeds: "Coordination" },
+  { id: "drawings", route: "/drawings", no: "23", name: "Drawings", tag: "FIELD", active: true, desc: "Upload plan sheets and drop pin markups with notes.", feeds: "Field" },
 ];
 
 // ---- math ----
