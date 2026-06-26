@@ -38,7 +38,7 @@ export default function DashboardPage() {
     }
   };
 
-  const reloadFiles = useCallback(() => { filesAll().then(setFiles); }, []);
+  const reloadFiles = useCallback(() => { filesAll(currentId).then(setFiles); }, [currentId]);
   useEffect(() => { reloadFiles(); }, [reloadFiles]);
 
   const activeCount = APPS.filter((a) => a.active).length;
@@ -60,7 +60,7 @@ export default function DashboardPage() {
 
   const addFiles = (list: FileList | null) => {
     if (!list || list.length === 0) return;
-    filesAdd(list).then(reloadFiles);
+    filesAdd(list, currentId).then(reloadFiles);
   };
   const openFile = (id: string) => filesGet(id).then((r) => { if (r) window.open(URL.createObjectURL(r.blob), "_blank"); });
   const deleteFile = (id: string) => filesDelete(id).then(reloadFiles);

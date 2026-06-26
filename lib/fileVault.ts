@@ -3,7 +3,7 @@
 const DB_NAME = "tencent.files.v1";
 const STORE = "files";
 
-export type FileRec = { id: string; name: string; type: string; size: number; addedAt: number; blob: Blob };
+export type FileRec = { id: string; name: string; type: string; size: number; addedAt: number; blob: Blob; projectId?: string };
 
 function openDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -20,19 +20,21 @@ function openDB(): Promise<IDBDatabase> {
 const rid = () =>
   typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `f${Math.random().toString(36).slice(2)}`;
 
-export async function filesAdd(list: FileList | File[]): Promise<number> {
+export async function filesAdd(list: FileList | File[], projectId?: string): Promise<number> {
   const arr = Array.from(list);
   const db = await openDB();
   return new Promise((res, rej) => {
     const tx = db.transaction(STORE, "readwrite");
     const store = tx.objectStore(STORE);
-    arr.forEach((f) => store.put({ id: rid(), name: f.name, type: f.type || "", size: f.size, addedAt: Date.now(), blob: f }));
+    arr.forEach((f) => store.put({ id: rid(), name: f.name, type: f.type || "", size: f.size, addedAt: Date.now(), blob: f, projectId }));
     tx.oncomplete = () => res(arr.length);
     tx.onerror = () => rej(tx.error);
   });
 }
 
-export async function filesAll(): Promise<FileRec[]> {
+// Returns files for a project. Legacy files (saved before per-project scoping,
+// with no projectId) are shown everywhere so nothing is ever lost.
+export async function filesAll(projectId?: string): Promise<FileRec[]> {
   try {
     const db = await openDB();
     return await new Promise<FileRec[]>((res, rej) => {
@@ -41,8 +43,14 @@ export async function filesAll(): Promise<FileRec[]> {
       const cur = tx.objectStore(STORE).openCursor();
       cur.onsuccess = () => {
         const c = cur.result;
-        if (c) { out.push(c.value as FileRec); c.continue(); }
-        else { out.sort((a, b) => b.addedAt - a.addedAt); res(out); }
+        if (c) {
+          const rec = c.value as FileRec;
+          if (!projectId || !rec.projectId || rec.projectId === projectId) out.push(rec);
+          c.continue();
+        } else {
+          out.sort((a, b) => b.addedAt - a.addedAt);
+          res(out);
+        }
       };
       cur.onerror = () => rej(cur.error);
     });
