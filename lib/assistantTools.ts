@@ -2,7 +2,7 @@
 // executor that applies a tool call and returns the new job.
 import type Anthropic from "@anthropic-ai/sdk";
 import { randomUUID } from "node:crypto";
-import { type Job, type Division, type LineItem, type TrackItem, type DailyReport, type Crew, type Proposal, type PunchItem, type Contact, type Commitment, UNITS, CSI_CATALOG, csiName, bidLevelingDefaults } from "./store";
+import { type Job, type Division, type LineItem, type TrackItem, type DailyReport, type Crew, type Proposal, type PunchItem, type Contact, type Commitment, type Inspection, type ChecklistItem, UNITS, CSI_CATALOG, csiName, bidLevelingDefaults } from "./store";
 
 const unitList = UNITS.join(", ");
 const csiList = CSI_CATALOG.map(([c, name]) => `${c} ${name}`).join("; ");
@@ -290,6 +290,21 @@ export const tools: Anthropic.Tool[] = [
       required: ["company", "amount"],
     },
   },
+  {
+    name: "add_inspection",
+    description: "Create a quality or safety inspection with a checklist. Provide the checklist line items as plain strings.",
+    input_schema: {
+      type: "object",
+      properties: {
+        title: { type: "string" },
+        type: { type: "string", enum: ["Quality", "Safety"] },
+        inspector: { type: "string" },
+        date: { type: "string", description: "YYYY-MM-DD; defaults to today." },
+        items: { type: "array", description: "Checklist item descriptions.", items: { type: "string" } },
+      },
+      required: ["title"],
+    },
+  },
 ];
 
 type ToolInput = Record<string, unknown>;
@@ -559,6 +574,21 @@ export function applyToolUse(job: Job, name: string, input: ToolInput): { job: J
       };
       j.commitments = [...j.commitments, item];
       return { job: j, result: `Added ${item.number} — ${item.company} ($${num(input.amount).toLocaleString("en-US")}).` };
+    }
+    case "add_inspection": {
+      const itemsIn = Array.isArray(input.items) ? (input.items as unknown[]) : [];
+      const items: ChecklistItem[] = itemsIn.map((t) => ({ id: randomUUID(), text: str(t), result: "" }));
+      const insp: Inspection = {
+        id: randomUUID(),
+        title: str(input.title, "New inspection"),
+        type: str(input.type) === "Safety" ? "Safety" : "Quality",
+        date: str(input.date) || new Date().toISOString().slice(0, 10),
+        inspector: str(input.inspector, "GC"),
+        status: "Open",
+        items: items.length ? items : [{ id: randomUUID(), text: "", result: "" }],
+      };
+      j.inspections = [insp, ...j.inspections];
+      return { job: j, result: `Created ${insp.type.toLowerCase()} inspection "${insp.title}" with ${items.length} checklist item${items.length === 1 ? "" : "s"}.` };
     }
     default:
       return { job: j, result: `Unknown tool: ${name}.` };
