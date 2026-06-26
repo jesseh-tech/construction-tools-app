@@ -55,6 +55,9 @@ export default function DashboardPage() {
     if (app.id === "directory") return { stat: String(job.directory.length), label: "CONTACTS" };
     if (app.id === "commitments") return { stat: money0(job.commitments.reduce((a, x) => a + x.amount, 0)), label: "COMMITTED" };
     if (app.id === "inspections") return { stat: String(job.inspections.length), label: "INSPECTIONS" };
+    if (app.id === "tasks") return { stat: String(job.tasks.filter((t) => t.status !== "Done").length), label: "OPEN TASKS" };
+    if (app.id === "observations") return { stat: String(job.observations.filter((o) => o.status === "Open").length), label: "OPEN" };
+    if (app.id === "incidents") return { stat: String(job.incidents.length), label: "INCIDENTS" };
     return { stat: app.active ? "READY" : "SOON", label: "STATUS" };
   };
 

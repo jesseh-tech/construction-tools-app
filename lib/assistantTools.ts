@@ -2,7 +2,7 @@
 // executor that applies a tool call and returns the new job.
 import type Anthropic from "@anthropic-ai/sdk";
 import { randomUUID } from "node:crypto";
-import { type Job, type Division, type LineItem, type TrackItem, type DailyReport, type Crew, type Proposal, type PunchItem, type Contact, type Commitment, type Inspection, type ChecklistItem, UNITS, CSI_CATALOG, csiName, bidLevelingDefaults } from "./store";
+import { type Job, type Division, type LineItem, type TrackItem, type DailyReport, type Crew, type Proposal, type PunchItem, type Contact, type Commitment, type Inspection, type ChecklistItem, type Task, type Observation, type Incident, UNITS, CSI_CATALOG, csiName, bidLevelingDefaults } from "./store";
 
 const unitList = UNITS.join(", ");
 const csiList = CSI_CATALOG.map(([c, name]) => `${c} ${name}`).join("; ");
@@ -305,6 +305,49 @@ export const tools: Anthropic.Tool[] = [
       required: ["title"],
     },
   },
+  {
+    name: "add_task",
+    description: "Add a task / action item with an owner, due date, and priority.",
+    input_schema: {
+      type: "object",
+      properties: {
+        title: { type: "string" },
+        assignee: { type: "string" },
+        due: { type: "string", description: "YYYY-MM-DD; optional." },
+        priority: { type: "string", enum: ["Low", "Medium", "High"] },
+      },
+      required: ["title"],
+    },
+  },
+  {
+    name: "add_observation",
+    description: "Log a safety or quality observation from the field. A number is assigned automatically.",
+    input_schema: {
+      type: "object",
+      properties: {
+        title: { type: "string" },
+        type: { type: "string", enum: ["Safety", "Quality", "Commissioning", "Warranty", "Environmental"] },
+        location: { type: "string" },
+        assignee: { type: "string" },
+      },
+      required: ["title"],
+    },
+  },
+  {
+    name: "add_incident",
+    description: "Log a safety incident report (injury, near miss, property damage, environmental). A number is assigned automatically.",
+    input_schema: {
+      type: "object",
+      properties: {
+        description: { type: "string" },
+        type: { type: "string", enum: ["Injury", "Near Miss", "Property Damage", "Environmental"] },
+        severity: { type: "string", enum: ["Low", "Medium", "High", "Recordable"] },
+        location: { type: "string" },
+        reportedBy: { type: "string" },
+      },
+      required: ["description"],
+    },
+  },
 ];
 
 type ToolInput = Record<string, unknown>;
@@ -331,6 +374,9 @@ function clone(job: Job): Job {
     directory: [...job.directory],
     commitments: [...job.commitments],
     inspections: [...job.inspections],
+    tasks: [...job.tasks],
+    observations: [...job.observations],
+    incidents: [...job.incidents],
   };
 }
 
@@ -589,6 +635,44 @@ export function applyToolUse(job: Job, name: string, input: ToolInput): { job: J
       };
       j.inspections = [insp, ...j.inspections];
       return { job: j, result: `Created ${insp.type.toLowerCase()} inspection "${insp.title}" with ${items.length} checklist item${items.length === 1 ? "" : "s"}.` };
+    }
+    case "add_task": {
+      const pr = ["Low", "Medium", "High"].includes(str(input.priority)) ? str(input.priority) : "Medium";
+      const task: Task = { id: randomUUID(), title: str(input.title), assignee: str(input.assignee, "GC"), due: str(input.due), priority: pr as Task["priority"], status: "Open" };
+      j.tasks = [...j.tasks, task];
+      return { job: j, result: `Added task: ${task.title}` };
+    }
+    case "add_observation": {
+      const type = ["Safety", "Quality", "Commissioning", "Warranty", "Environmental"].includes(str(input.type)) ? str(input.type) : "Safety";
+      const obs: Observation = {
+        id: randomUUID(),
+        number: `OBS-${String(j.observations.length + 1).padStart(3, "0")}`,
+        type: type as Observation["type"],
+        title: str(input.title),
+        location: str(input.location),
+        assignee: str(input.assignee, "GC"),
+        date: new Date().toISOString().slice(0, 10),
+        status: "Open",
+      };
+      j.observations = [...j.observations, obs];
+      return { job: j, result: `Logged ${obs.number} (${obs.type}): ${obs.title}` };
+    }
+    case "add_incident": {
+      const type = ["Injury", "Near Miss", "Property Damage", "Environmental"].includes(str(input.type)) ? str(input.type) : "Near Miss";
+      const sev = ["Low", "Medium", "High", "Recordable"].includes(str(input.severity)) ? str(input.severity) : "Low";
+      const inc: Incident = {
+        id: randomUUID(),
+        number: `INC-${String(j.incidents.length + 1).padStart(3, "0")}`,
+        date: new Date().toISOString().slice(0, 10),
+        type: type as Incident["type"],
+        severity: sev as Incident["severity"],
+        description: str(input.description),
+        location: str(input.location),
+        reportedBy: str(input.reportedBy, "GC"),
+        status: "Open",
+      };
+      j.incidents = [...j.incidents, inc];
+      return { job: j, result: `Logged ${inc.number} (${inc.type}, ${inc.severity}).` };
     }
     default:
       return { job: j, result: `Unknown tool: ${name}.` };

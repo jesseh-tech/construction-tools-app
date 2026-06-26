@@ -58,6 +58,10 @@ export type Commitment = { id: string; number: string; type: "Subcontract" | "Pu
 export type ChecklistItem = { id: string; text: string; result: "" | "Pass" | "Fail" | "N/A" };
 export type Inspection = { id: string; title: string; type: "Quality" | "Safety"; date: string; inspector: string; status: "Open" | "Passed" | "Failed"; items: ChecklistItem[] };
 
+export type Task = { id: string; title: string; assignee: string; due: string; priority: "Low" | "Medium" | "High"; status: "Open" | "In Progress" | "Done" };
+export type Observation = { id: string; number: string; type: "Safety" | "Quality" | "Commissioning" | "Warranty" | "Environmental"; title: string; location: string; assignee: string; date: string; status: "Open" | "Closed" };
+export type Incident = { id: string; number: string; date: string; type: "Injury" | "Near Miss" | "Property Damage" | "Environmental"; severity: "Low" | "Medium" | "High" | "Recordable"; description: string; location: string; reportedBy: string; status: "Open" | "Under Review" | "Closed" };
+
 export type Job = {
   meta: Meta;
   markups: Markups;
@@ -74,6 +78,9 @@ export type Job = {
   directory: Contact[];
   commitments: Commitment[];
   inspections: Inspection[];
+  tasks: Task[];
+  observations: Observation[];
+  incidents: Incident[];
 };
 
 export const proposalDefaults = (): Proposal => ({
@@ -178,6 +185,9 @@ export const APPS: AppEntry[] = [
   { id: "commitments", route: "/commitments", no: "11", name: "Commitments", tag: "PROJECT CONTROLS", active: true, desc: "Subcontracts & POs tracked against the estimate budget.", feeds: "Buyout vs estimate" },
   { id: "punch", route: "/punch-list", no: "12", name: "Punch List", tag: "QUALITY & CLOSEOUT", active: true, desc: "Closeout deficiencies by location, trade, assignee and status.", feeds: "Field & closeout" },
   { id: "inspections", route: "/inspections", no: "13", name: "Inspections & Safety", tag: "QUALITY & CLOSEOUT", active: true, desc: "Quality & safety checklists, observations and toolbox talks.", feeds: "Quality & safety" },
+  { id: "tasks", route: "/tasks", no: "14", name: "Tasks", tag: "PROJECT CONTROLS", active: true, desc: "Action items and to-dos with owner, due date and status.", feeds: "Coordination" },
+  { id: "observations", route: "/observations", no: "15", name: "Observations", tag: "QUALITY & CLOSEOUT", active: true, desc: "Log safety & quality observations from the field.", feeds: "Quality & safety" },
+  { id: "incidents", route: "/incidents", no: "16", name: "Incident Reports", tag: "QUALITY & CLOSEOUT", active: true, desc: "Injuries, near-misses and property damage with severity.", feeds: "Safety" },
 ];
 
 // ---- math ----
@@ -384,6 +394,15 @@ export function seedJob(): Job {
         { id: newId(), text: "MEP rough-in complete & inspected", result: "Pass" },
       ] },
     ],
+    tasks: [
+      { id: newId(), title: "Order long-lead door hardware", assignee: "PM", due: "2026-07-01", priority: "High", status: "In Progress" },
+      { id: newId(), title: "Schedule pre-installation meeting for casework", assignee: "Super", due: "2026-07-08", priority: "Medium", status: "Open" },
+    ],
+    observations: [
+      { id: newId(), number: "OBS-001", type: "Safety", title: "Extension cord across walkway — trip hazard", location: "Corridor B", assignee: "Front Range Drywall", date: "2026-06-22", status: "Open" },
+      { id: newId(), number: "OBS-002", type: "Quality", title: "GWB corner bead not fully seated", location: "Suite 410", assignee: "Summit Interiors", date: "2026-06-20", status: "Closed" },
+    ],
+    incidents: [],
   };
 }
 
@@ -416,6 +435,9 @@ export function normalizeJob(input: unknown): Job {
     directory: arr(j.directory, []),
     commitments: arr(j.commitments, []),
     inspections: arr(j.inspections, []),
+    tasks: arr(j.tasks, []),
+    observations: arr(j.observations, []),
+    incidents: arr(j.incidents, []),
   };
 }
 
@@ -437,5 +459,8 @@ export function blankJob(): Job {
     directory: [],
     commitments: [],
     inspections: [],
+    tasks: [],
+    observations: [],
+    incidents: [],
   };
 }
