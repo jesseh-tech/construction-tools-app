@@ -2,7 +2,7 @@
 // executor that applies a tool call and returns the new job.
 import type Anthropic from "@anthropic-ai/sdk";
 import { randomUUID } from "node:crypto";
-import { type Job, type Division, type LineItem, type TrackItem, UNITS, CSI_CATALOG, csiName } from "./store";
+import { type Job, type Division, type LineItem, type TrackItem, type DailyReport, type Crew, type Proposal, UNITS, CSI_CATALOG, csiName, bidLevelingDefaults } from "./store";
 
 const unitList = UNITS.join(", ");
 const csiList = CSI_CATALOG.map(([c, name]) => `${c} ${name}`).join("; ");
@@ -159,6 +159,68 @@ export const tools: Anthropic.Tool[] = [
       type: "object",
       properties: { ref_no: { type: "string" } },
       required: ["ref_no"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "save_daily_report",
+    description: "Create and save a daily field report. Use when the user describes a day in the field (weather, crews on site, work performed, issues).",
+    input_schema: {
+      type: "object",
+      properties: {
+        date: { type: "string", description: "YYYY-MM-DD; defaults to today." },
+        weather: { type: "string", description: "e.g. Clear, Rain, Overcast, Windy, Hot, Freezing." },
+        temp: { type: "string", description: "Temperature °F." },
+        delays: { type: "string", description: "Delays / lost time, if any." },
+        work: { type: "string", description: "Work performed today." },
+        notes: { type: "string", description: "Notes, issues, deliveries, inspections." },
+        crews: {
+          type: "array",
+          description: "Crews on site.",
+          items: {
+            type: "object",
+            properties: { company: { type: "string" }, count: { type: "string", description: "Headcount." }, hours: { type: "string", description: "Hours worked." } },
+            required: ["company"],
+          },
+        },
+      },
+      required: ["work"],
+    },
+  },
+  {
+    name: "set_proposal_field",
+    description: "Edit a field on the client-facing Bid Proposal (intro paragraph, inclusions, exclusions, prepared-by, valid days, or date).",
+    input_schema: {
+      type: "object",
+      properties: {
+        field: { type: "string", enum: ["intro", "inclusions", "exclusions", "preparedBy", "validDays", "date"] },
+        value: { type: "string" },
+      },
+      required: ["field", "value"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "add_bidder",
+    description: "Add a subcontractor bidder column to the Bid Leveling comparison.",
+    input_schema: {
+      type: "object",
+      properties: { name: { type: "string" } },
+      required: ["name"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "set_bid_price",
+    description: "Set a bidder's price for a scope line in Bid Leveling. Matches the bidder and scope line by name (partial, case-insensitive).",
+    input_schema: {
+      type: "object",
+      properties: {
+        bidder: { type: "string", description: "Bidder name (or part of it)." },
+        scope: { type: "string", description: "Scope line label (or part of it)." },
+        amount: { type: "number" },
+      },
+      required: ["bidder", "scope", "amount"],
       additionalProperties: false,
     },
   },
@@ -325,6 +387,46 @@ export function applyToolUse(job: Job, name: string, input: ToolInput): { job: J
       j.submittals = j.submittals.filter((x) => x.refNo !== ref);
       j.rfis = j.rfis.filter((x) => x.refNo !== ref);
       return { job: j, result: before === j.submittals.length + j.rfis.length ? `No item ${ref}.` : `Removed ${ref}.` };
+    }
+    case "save_daily_report": {
+      const crewsIn = Array.isArray(input.crews) ? (input.crews as Record<string, unknown>[]) : [];
+      const crews: Crew[] = crewsIn.map((cw) => ({ id: randomUUID(), company: str(cw.company), count: str(cw.count, "0"), hours: str(cw.hours, "8") }));
+      const rep: DailyReport = {
+        id: randomUUID(),
+        date: str(input.date) || new Date().toISOString().slice(0, 10),
+        weather: str(input.weather, "Clear"),
+        temp: str(input.temp, "72"),
+        delays: str(input.delays),
+        crews,
+        work: str(input.work),
+        notes: str(input.notes),
+      };
+      j.dailyReports = [rep, ...j.dailyReports].sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+      return { job: j, result: `Saved daily report for ${rep.date} (${crews.length} crew${crews.length === 1 ? "" : "s"}).` };
+    }
+    case "set_proposal_field": {
+      const field = str(input.field);
+      if (!["intro", "inclusions", "exclusions", "preparedBy", "validDays", "date"].includes(field))
+        return { job: j, result: `Unknown proposal field ${field}.` };
+      j.proposal = { ...j.proposal, [field as keyof Proposal]: str(input.value) };
+      return { job: j, result: `Updated proposal ${field}.` };
+    }
+    case "add_bidder": {
+      if (!j.bidLeveling) j.bidLeveling = bidLevelingDefaults();
+      j.bidLeveling = { ...j.bidLeveling, subs: [...j.bidLeveling.subs, { id: randomUUID(), name: str(input.name), prices: {} }] };
+      return { job: j, result: `Added bidder "${str(input.name)}".` };
+    }
+    case "set_bid_price": {
+      if (!j.bidLeveling) j.bidLeveling = bidLevelingDefaults();
+      const bl = j.bidLeveling;
+      const bq = str(input.bidder).toLowerCase();
+      const sq = str(input.scope).toLowerCase();
+      const sub = bl.subs.find((s) => s.name.toLowerCase().includes(bq));
+      const sc = bl.scope.find((s) => s.label.toLowerCase().includes(sq));
+      if (!sub) return { job: j, result: `No bidder matching "${str(input.bidder)}".` };
+      if (!sc) return { job: j, result: `No scope line matching "${str(input.scope)}".` };
+      j.bidLeveling = { ...bl, subs: bl.subs.map((s) => (s.id !== sub.id ? s : { ...s, prices: { ...s.prices, [sc.id]: String(num(input.amount)) } })) };
+      return { job: j, result: `Set ${sub.name} · ${sc.label} to $${num(input.amount)}.` };
     }
     default:
       return { job: j, result: `Unknown tool: ${name}.` };

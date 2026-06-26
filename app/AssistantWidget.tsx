@@ -12,7 +12,7 @@ export function AssistantWidget() {
     {
       role: "assistant",
       content:
-        "Hi — I'm your estimating assistant. Tell me what you've got, like \"I have 400 sq ft of drywall,\" and I'll add it to the estimate.",
+        "Hi — I'm your project assistant. I can update your estimate, SOV, change orders, pay app, submittals, daily reports and more, and answer questions about the job. What do you need?",
     },
   ]);
   const [input, setInput] = useState("");
@@ -23,8 +23,8 @@ export function AssistantWidget() {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
   }, [messages, open]);
 
-  async function send() {
-    const text = input.trim();
+  async function send(preset?: string) {
+    const text = (preset ?? input).trim();
     if (!text || busy) return;
     const next = [...messages, { role: "user" as const, content: text }];
     setMessages(next);
@@ -87,6 +87,24 @@ export function AssistantWidget() {
                 {m.content}
               </div>
             ))}
+            {messages.length === 1 && !busy && (
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                {[
+                  "What's my total bid and margin?",
+                  "Add 400 sq ft of drywall",
+                  "Which RFIs are overdue?",
+                  "Mark Finishes 60% complete",
+                ].map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => send(s)}
+                    className="rounded-full border border-gray-300 px-2.5 py-1 text-xs text-gray-600 hover:border-[#15212d] hover:text-[#15212d]"
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            )}
             {busy && <div className="text-xs text-gray-400">Assistant is working…</div>}
           </div>
 
@@ -100,7 +118,7 @@ export function AssistantWidget() {
               disabled={busy}
             />
             <button
-              onClick={send}
+              onClick={() => send()}
               disabled={busy}
               className="rounded-md bg-[#f5a623] px-3 py-2 text-sm font-semibold text-[#15212d] hover:bg-[#e0961a] disabled:opacity-50"
             >

@@ -1,22 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useProject } from "../ProjectProvider";
 import { APPS, type AppEntry, type AppPhase, compute, money0 } from "@/lib/store";
+import { type FileRec, filesAll, filesAdd, filesDelete, filesGet, fileExt, fileSize } from "@/lib/fileVault";
 
 const ACCENT = "#f5a623";
-
-type DocFile = { id: string; name: string; size: number; addedAt: number; url: string };
-const fileExt = (name: string) => (/\.([a-z0-9]+)$/i.exec(name)?.[1].toUpperCase() ?? "FILE");
-const fileSize = (b: number) => (b < 1024 ? `${b} B` : b < 1048576 ? `${(b / 1024).toFixed(b < 10240 ? 1 : 0)} KB` : `${(b / 1048576).toFixed(b < 10485760 ? 1 : 0)} MB`);
 
 export default function DashboardPage() {
   const { job, reset } = useProject();
   const c = compute(job);
-  const [files, setFiles] = useState<DocFile[]>([]);
+  const [files, setFiles] = useState<FileRec[]>([]);
   const [dragging, setDragging] = useState(false);
+
+  const reloadFiles = useCallback(() => { filesAll().then(setFiles); }, []);
+  useEffect(() => { reloadFiles(); }, [reloadFiles]);
 
   const activeCount = APPS.filter((a) => a.active).length;
 
@@ -32,10 +32,11 @@ export default function DashboardPage() {
   };
 
   const addFiles = (list: FileList | null) => {
-    if (!list) return;
-    const next = Array.from(list).map((f) => ({ id: `${Date.now()}-${f.name}`, name: f.name, size: f.size, addedAt: Date.now(), url: URL.createObjectURL(f) }));
-    setFiles((prev) => [...next, ...prev]);
+    if (!list || list.length === 0) return;
+    filesAdd(list).then(reloadFiles);
   };
+  const openFile = (id: string) => filesGet(id).then((r) => { if (r) window.open(URL.createObjectURL(r.blob), "_blank"); });
+  const deleteFile = (id: string) => filesDelete(id).then(reloadFiles);
 
   const Tile = ({ app }: { app: AppEntry }) => {
     const { stat, label } = statFor(app);
@@ -160,8 +161,8 @@ export default function DashboardPage() {
                   <div style={{ flex: 1, minWidth: 0, fontFamily: "'Barlow'", fontWeight: 500, fontSize: 14, color: "#15212d", paddingRight: 14, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.name}</div>
                   <div style={{ width: 90, flex: "none", textAlign: "right", fontFamily: "'JetBrains Mono'", fontSize: 12, color: "#5a6470" }}>{fileSize(f.size)}</div>
                   <div style={{ width: 148, flex: "none", display: "flex", justifyContent: "flex-end", gap: 8, padding: "0 16px 0 14px" }}>
-                    <button onClick={() => window.open(f.url, "_blank")} style={{ background: "transparent", border: "1.5px solid #1c2b3a", color: "#1c2b3a", fontFamily: "'Barlow Condensed'", fontWeight: 700, fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", padding: "5px 12px", cursor: "pointer", borderRadius: 2 }}>Open</button>
-                    <button onClick={() => setFiles((prev) => prev.filter((x) => x.id !== f.id))} title="Remove file" style={{ width: 28, height: 28, flex: "none", background: "transparent", border: "1px solid #d6d3cb", color: "#a59f92", cursor: "pointer", borderRadius: 2, fontSize: 13, lineHeight: 1 }}>✕</button>
+                    <button onClick={() => openFile(f.id)} style={{ background: "transparent", border: "1.5px solid #1c2b3a", color: "#1c2b3a", fontFamily: "'Barlow Condensed'", fontWeight: 700, fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", padding: "5px 12px", cursor: "pointer", borderRadius: 2 }}>Open</button>
+                    <button onClick={() => deleteFile(f.id)} title="Remove file" style={{ width: 28, height: 28, flex: "none", background: "transparent", border: "1px solid #d6d3cb", color: "#a59f92", cursor: "pointer", borderRadius: 2, fontSize: 13, lineHeight: 1 }}>✕</button>
                   </div>
                 </div>
               ))}
