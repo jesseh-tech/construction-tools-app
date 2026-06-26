@@ -356,8 +356,12 @@ export const tools: Anthropic.Tool[] = [
       type: "object",
       properties: {
         title: { type: "string" },
+        type: { type: "string", description: "e.g. Progress, OAC, Coordination, Safety / Toolbox." },
         date: { type: "string", description: "YYYY-MM-DD; defaults to today." },
-        attendees: { type: "string" },
+        time: { type: "string" },
+        location: { type: "string" },
+        attendees: { type: "string", description: "Who attended." },
+        recordedBy: { type: "string", description: "Who recorded the minutes." },
         notes: { type: "string" },
         actions: { type: "array", description: "Action items as plain strings.", items: { type: "string" } },
       },
@@ -759,8 +763,12 @@ export function applyToolUse(job: Job, name: string, input: ToolInput): { job: J
       const meeting: Meeting = {
         id: randomUUID(),
         title: str(input.title, "Meeting"),
+        type: str(input.type, "Progress"),
         date: str(input.date) || new Date().toISOString().slice(0, 10),
+        time: str(input.time),
+        location: str(input.location),
         attendees: str(input.attendees),
+        recordedBy: str(input.recordedBy, "GC"),
         notes: str(input.notes),
         actions,
       };

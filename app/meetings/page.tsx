@@ -6,6 +6,7 @@ import { type Meeting, type ActionItem, newId } from "@/lib/store";
 
 const ACCENT = "#f5a623";
 const TODAY = "2026-06-25";
+const MEETING_TYPES = ["Progress", "OAC (Owner-Architect-Contractor)", "Preconstruction", "Coordination", "Subcontractor", "Pre-Installation", "Safety / Toolbox", "Other"];
 
 export default function MeetingsPage() {
   const { job, setJob } = useProject();
@@ -13,7 +14,7 @@ export default function MeetingsPage() {
 
   const setList = (n: Meeting[]) => setJob({ ...job, meetings: n });
   const setMtg = (id: string, patch: Partial<Meeting>) => setList(list.map((m) => (m.id === id ? { ...m, ...patch } : m)));
-  const addMtg = () => setList([{ id: newId(), title: "New meeting", date: TODAY, attendees: "", notes: "", actions: [] }, ...list]);
+  const addMtg = () => setList([{ id: newId(), title: "New meeting", type: "Progress", date: TODAY, time: "", location: "", attendees: "", recordedBy: "GC", notes: "", actions: [] }, ...list]);
   const itemsOf = (id: string) => list.find((m) => m.id === id)?.actions ?? [];
   const setAction = (mid: string, aid: string, patch: Partial<ActionItem>) => setMtg(mid, { actions: itemsOf(mid).map((a) => (a.id === aid ? { ...a, ...patch } : a)) });
   const addAction = (mid: string) => setMtg(mid, { actions: [...itemsOf(mid), { id: newId(), text: "", owner: "", done: false }] });
@@ -57,6 +58,26 @@ export default function MeetingsPage() {
               <button onClick={() => setList(list.filter((x) => x.id !== m.id))} style={{ width: 30, height: 30, border: "1px solid #d6d3cb", background: "transparent", color: "#a59f92", cursor: "pointer", borderRadius: 2, fontSize: 13 }}>✕</button>
             </div>
             <div style={{ padding: "14px 18px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 12, marginBottom: 16 }}>
+                <div>
+                  <div style={head()}>Meeting Type</div>
+                  <select value={m.type ?? "Progress"} onChange={(e) => setMtg(m.id, { type: e.target.value })} style={{ ...fld, width: "100%", cursor: "pointer" }}>
+                    {MEETING_TYPES.map((t) => (<option key={t} value={t}>{t}</option>))}
+                  </select>
+                </div>
+                <div>
+                  <div style={head()}>Time</div>
+                  <input value={m.time ?? ""} onChange={(e) => setMtg(m.id, { time: e.target.value })} placeholder="e.g. 10:00 AM" style={{ ...fld, width: "100%" }} />
+                </div>
+                <div>
+                  <div style={head()}>Location</div>
+                  <input value={m.location ?? ""} onChange={(e) => setMtg(m.id, { location: e.target.value })} placeholder="Trailer, Zoom, site…" style={{ ...fld, width: "100%" }} />
+                </div>
+                <div>
+                  <div style={head()}>Recorded By</div>
+                  <input value={m.recordedBy ?? ""} onChange={(e) => setMtg(m.id, { recordedBy: e.target.value })} placeholder="Who took minutes" style={{ ...fld, width: "100%" }} />
+                </div>
+              </div>
               <div style={head()}>Notes / Minutes</div>
               <textarea value={m.notes} onChange={(e) => setMtg(m.id, { notes: e.target.value })} rows={3} placeholder="Discussion, decisions…" style={{ width: "100%", border: "1px solid #e7e5dd", resize: "vertical", fontFamily: "'Barlow'", fontSize: 14, lineHeight: 1.6, color: "#33404c", outline: "none", background: "#faf9f6", padding: 10, borderRadius: 2 }} />
               <div style={{ ...head(), marginTop: 14 }}>Action Items</div>

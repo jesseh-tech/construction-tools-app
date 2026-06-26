@@ -65,7 +65,7 @@ export type Observation = { id: string; number: string; type: "Safety" | "Qualit
 export type Incident = { id: string; number: string; date: string; type: "Injury" | "Near Miss" | "Property Damage" | "Environmental"; severity: "Low" | "Medium" | "High" | "Recordable"; description: string; location: string; reportedBy: string; corrective: string; status: "Open" | "Under Review" | "Closed" };
 
 export type ActionItem = { id: string; text: string; owner: string; done: boolean };
-export type Meeting = { id: string; title: string; date: string; attendees: string; notes: string; actions: ActionItem[] };
+export type Meeting = { id: string; title: string; type?: string; date: string; time?: string; location?: string; attendees: string; recordedBy?: string; notes: string; actions: ActionItem[] };
 export type Milestone = { id: string; title: string; start: string; end: string; status: "Not Started" | "In Progress" | "Complete"; phase: string };
 
 export type BudgetLine = { code: string; committed: number; actual: number };
@@ -426,7 +426,7 @@ export function seedJob(): Job {
     ],
     incidents: [],
     meetings: [
-      { id: newId(), title: "Weekly OAC Meeting", date: "2026-06-24", attendees: "Owner, Architect, GC, Summit Interiors", notes: "Reviewed schedule, RFIs, and submittal log. Owner approved corridor flooring upgrade (CO-002 pending).", actions: [
+      { id: newId(), title: "Weekly OAC Meeting", type: "OAC (Owner-Architect-Contractor)", date: "2026-06-24", time: "10:00 AM", location: "Westgate Tower — Job Trailer", attendees: "J. Horine (GC), R. Vance (Owner), L. Mehta (Architect), Summit Interiors", recordedBy: "GC / PM", notes: "Reviewed schedule, RFIs, and submittal log. Owner approved corridor flooring upgrade (CO-002 pending).", actions: [
         { id: newId(), text: "Architect to respond to RFI-001 (beam conflict)", owner: "Architect", done: false },
         { id: newId(), text: "GC to issue CO-002 for corridor tile", owner: "GC", done: false },
       ] },
