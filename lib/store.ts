@@ -175,7 +175,7 @@ export const APPS: AppEntry[] = [
   { id: "submittals", route: "/submittals", no: "08", name: "Submittals & RFIs", tag: "PROJECT CONTROLS", active: true, desc: "Log submittals and RFIs with status and ball-in-court.", feeds: "Standalone" },
   { id: "daily", route: "/daily-report", no: "09", name: "Daily Field Report", tag: "FIELD", active: true, desc: "Weather, crew, work performed and photos from the field.", feeds: "Standalone" },
   { id: "directory", route: "/directory", no: "10", name: "Project Directory", tag: "PROJECT CONTROLS", active: true, desc: "Companies & contacts — owner, architect, subs and vendors.", feeds: "Ball in court" },
-  { id: "commitments", route: "/commitments", no: "11", name: "Commitments", tag: "PROJECT CONTROLS", active: false, desc: "Subcontracts & POs tracked against the estimate budget.", feeds: "Buyout vs estimate" },
+  { id: "commitments", route: "/commitments", no: "11", name: "Commitments", tag: "PROJECT CONTROLS", active: true, desc: "Subcontracts & POs tracked against the estimate budget.", feeds: "Buyout vs estimate" },
   { id: "punch", route: "/punch-list", no: "12", name: "Punch List", tag: "QUALITY & CLOSEOUT", active: true, desc: "Closeout deficiencies by location, trade, assignee and status.", feeds: "Field & closeout" },
   { id: "inspections", route: "/inspections", no: "13", name: "Inspections & Safety", tag: "QUALITY & CLOSEOUT", active: false, desc: "Quality & safety checklists, observations and toolbox talks.", feeds: "Quality & safety" },
 ];

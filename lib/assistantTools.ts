@@ -2,7 +2,7 @@
 // executor that applies a tool call and returns the new job.
 import type Anthropic from "@anthropic-ai/sdk";
 import { randomUUID } from "node:crypto";
-import { type Job, type Division, type LineItem, type TrackItem, type DailyReport, type Crew, type Proposal, type PunchItem, type Contact, UNITS, CSI_CATALOG, csiName, bidLevelingDefaults } from "./store";
+import { type Job, type Division, type LineItem, type TrackItem, type DailyReport, type Crew, type Proposal, type PunchItem, type Contact, type Commitment, UNITS, CSI_CATALOG, csiName, bidLevelingDefaults } from "./store";
 
 const unitList = UNITS.join(", ");
 const csiList = CSI_CATALOG.map(([c, name]) => `${c} ${name}`).join("; ");
@@ -274,6 +274,22 @@ export const tools: Anthropic.Tool[] = [
       required: ["company"],
     },
   },
+  {
+    name: "add_commitment",
+    description: "Add a commitment (subcontract or purchase order) tracked against the estimate budget. A number is assigned automatically.",
+    input_schema: {
+      type: "object",
+      properties: {
+        kind: { type: "string", enum: ["Subcontract", "Purchase Order"] },
+        company: { type: "string" },
+        division_code: { type: "string", description: "Two-digit CSI division code." },
+        description: { type: "string" },
+        amount: { type: "number" },
+        status: { type: "string", enum: ["Draft", "Out for Signature", "Executed", "Closed"] },
+      },
+      required: ["company", "amount"],
+    },
+  },
 ];
 
 type ToolInput = Record<string, unknown>;
@@ -525,6 +541,24 @@ export function applyToolUse(job: Job, name: string, input: ToolInput): { job: J
       };
       j.directory = [...j.directory, contact];
       return { job: j, result: `Added ${contact.company || contact.name} to the directory (${contact.type}).` };
+    }
+    case "add_commitment": {
+      const kind = str(input.kind) === "Purchase Order" ? "Purchase Order" : "Subcontract";
+      const prefix = kind === "Subcontract" ? "SC" : "PO";
+      const n = j.commitments.filter((x) => x.type === kind).length + 1;
+      const st = ["Draft", "Out for Signature", "Executed", "Closed"].includes(str(input.status)) ? str(input.status) : "Draft";
+      const item: Commitment = {
+        id: randomUUID(),
+        number: `${prefix}-${String(n).padStart(3, "0")}`,
+        type: kind,
+        company: str(input.company),
+        division: str(input.division_code, "09"),
+        description: str(input.description),
+        amount: num(input.amount),
+        status: st as Commitment["status"],
+      };
+      j.commitments = [...j.commitments, item];
+      return { job: j, result: `Added ${item.number} — ${item.company} ($${num(input.amount).toLocaleString("en-US")}).` };
     }
     default:
       return { job: j, result: `Unknown tool: ${name}.` };
