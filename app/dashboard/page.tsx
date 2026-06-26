@@ -139,7 +139,7 @@ export default function DashboardPage() {
         <span style={{ fontFamily: "'JetBrains Mono'", fontSize: 10, color: "#5e6b78" }}>{projects.length} job{projects.length === 1 ? "" : "s"}</span>
         <div style={{ flex: 1 }} />
         <button onClick={briefMe} disabled={briefing} style={{ background: "transparent", border: `1px solid ${ACCENT}`, color: ACCENT, fontFamily: "'Barlow Condensed'", fontWeight: 700, fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", padding: "6px 12px", cursor: "pointer", borderRadius: 2, opacity: briefing ? 0.6 : 1 }}>{briefing ? "Briefing…" : "✨ Brief Me"}</button>
-        <button onClick={newProject} style={{ background: ACCENT, border: "none", color: "#15212d", fontFamily: "'Barlow Condensed'", fontWeight: 700, fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", padding: "6px 12px", cursor: "pointer", borderRadius: 2 }}>+ New Project</button>
+        <button onClick={() => { const n = window.prompt("Name this project:", "New Project"); if (n !== null) newProject(n); }} style={{ background: ACCENT, border: "none", color: "#15212d", fontFamily: "'Barlow Condensed'", fontWeight: 700, fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", padding: "6px 12px", cursor: "pointer", borderRadius: 2 }}>+ New Project</button>
         <button
           onClick={() => { if (window.confirm(`Delete project "${job.meta.name}"? This can't be undone.`)) deleteProject(currentId); }}
           style={{ background: "transparent", border: "1px solid #3a4a5b", color: "#9aa6b2", fontFamily: "'Barlow Condensed'", fontWeight: 700, fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", padding: "6px 12px", cursor: "pointer", borderRadius: 2 }}

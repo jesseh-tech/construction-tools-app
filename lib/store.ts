@@ -429,7 +429,7 @@ export function blankJob(): Job {
     billing: { retainage: 5.0, pct: {} },
     payapp: { appNo: "1", periodTo: "", priorPct: 0 },
     proposal: proposalDefaults(),
-    bidLeveling: bidLevelingDefaults(),
+    bidLeveling: { trade: "", scope: [], subs: [] },
     submittals: [],
     rfis: [],
     dailyReports: [],

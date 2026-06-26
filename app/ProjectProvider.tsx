@@ -15,7 +15,7 @@ type ProjectContextValue = {
   projects: { id: string; name: string }[];
   currentId: string;
   switchProject: (id: string) => void;
-  newProject: () => void;
+  newProject: (name?: string) => void;
   deleteProject: (id: string) => void;
 };
 
@@ -81,10 +81,15 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     [persist, state],
   );
 
-  const newProject = useCallback(() => {
-    const id = newId();
-    persist({ current: id, items: { ...state.items, [id]: blankJob() } });
-  }, [persist, state]);
+  const newProject = useCallback(
+    (name?: string) => {
+      const id = newId();
+      const job = blankJob();
+      if (name && name.trim()) job.meta = { ...job.meta, name: name.trim() };
+      persist({ current: id, items: { ...state.items, [id]: job } });
+    },
+    [persist, state],
+  );
 
   const deleteProject = useCallback(
     (id: string) => {
