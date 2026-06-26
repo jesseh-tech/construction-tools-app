@@ -28,15 +28,13 @@ export function AssistantWidget() {
     {
       role: "assistant",
       content:
-        "Hi — I'm your project assistant. I can update your estimate, SOV, change orders, pay app, submittals, daily reports and more, and answer questions about the job. Type or tap the mic and talk to me.",
+        "Hi — I'm your project assistant. I can update your estimate, SOV, change orders, pay app, submittals, daily reports and more, and answer questions about the job. Type, or tap 🎤 and talk to me.",
     },
   ]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [listening, setListening] = useState(false);
   const [speakOn, setSpeakOn] = useState(false);
-  const [sttSupported, setSttSupported] = useState(false);
-  const [ttsSupported, setTtsSupported] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const recRef = useRef<SpeechRecognitionLike | null>(null);
   const speakOnRef = useRef(speakOn);
@@ -46,11 +44,8 @@ export function AssistantWidget() {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
   }, [messages, open]);
 
-  // Feature-detect voice + wire the ⌘K / Ctrl-K shortcut.
+  // ⌘K / Ctrl-K toggles the assistant from anywhere.
   useEffect(() => {
-    const w = window as SpeechWindow;
-    setSttSupported(!!(w.SpeechRecognition || w.webkitSpeechRecognition));
-    setTtsSupported(typeof window !== "undefined" && "speechSynthesis" in window);
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
@@ -62,12 +57,11 @@ export function AssistantWidget() {
   }, []);
 
   const speak = useCallback((text: string) => {
-    if (!speakOnRef.current || !("speechSynthesis" in window)) return;
-    const synth = window.speechSynthesis;
-    synth.cancel();
+    if (!speakOnRef.current || typeof window === "undefined" || !("speechSynthesis" in window)) return;
+    window.speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
     u.rate = 1.05;
-    synth.speak(u);
+    window.speechSynthesis.speak(u);
   }, []);
 
   const send = useCallback(
@@ -106,20 +100,31 @@ export function AssistantWidget() {
     }
     const w = window as SpeechWindow;
     const Ctor = w.SpeechRecognition || w.webkitSpeechRecognition;
-    if (!Ctor) return;
-    const rec = new Ctor();
-    rec.lang = "en-US";
-    rec.interimResults = false;
-    rec.continuous = false;
-    rec.onresult = (e) => {
-      const transcript = e.results[0]?.[0]?.transcript ?? "";
-      if (transcript) send(transcript);
-    };
-    rec.onend = () => setListening(false);
-    rec.onerror = () => setListening(false);
-    recRef.current = rec;
-    setListening(true);
-    rec.start();
+    if (!Ctor) {
+      setMessages((m) => [
+        ...m,
+        { role: "assistant", content: "Voice input needs Chrome, Edge, or Safari. On iPhone, open this site in Safari; on Android, use Chrome. You can always type instead." },
+      ]);
+      return;
+    }
+    try {
+      const rec = new Ctor();
+      rec.lang = "en-US";
+      rec.interimResults = false;
+      rec.continuous = false;
+      rec.onresult = (e) => {
+        const transcript = e.results[0]?.[0]?.transcript ?? "";
+        if (transcript) send(transcript);
+      };
+      rec.onend = () => setListening(false);
+      rec.onerror = () => setListening(false);
+      recRef.current = rec;
+      setListening(true);
+      rec.start();
+    } catch {
+      setListening(false);
+      setMessages((m) => [...m, { role: "assistant", content: "Couldn't start the microphone — please allow mic access and try again." }]);
+    }
   }, [listening, send]);
 
   return (
@@ -133,7 +138,7 @@ export function AssistantWidget() {
       </button>
 
       {open && (
-        <div className="noprint fixed bottom-20 right-5 z-50 flex h-[28rem] w-[22rem] flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl">
+        <div className="noprint fixed bottom-20 left-3 right-3 z-50 flex h-[72vh] flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl sm:left-auto sm:right-5 sm:h-[28rem] sm:w-[23rem]">
           <div className="flex items-center gap-2 border-b border-gray-200 bg-[#15212d] px-4 py-3 text-white">
             <span className="font-semibold">Project Assistant</span>
             {listening ? (
@@ -143,18 +148,16 @@ export function AssistantWidget() {
             ) : (
               <span className="ml-auto h-2 w-2 rounded-full bg-[#f5a623]" />
             )}
-            {ttsSupported && (
-              <button
-                onClick={() => {
-                  if (speakOn) window.speechSynthesis?.cancel();
-                  setSpeakOn((s) => !s);
-                }}
-                title={speakOn ? "Mute spoken replies" : "Read replies aloud"}
-                className="text-base leading-none opacity-80 hover:opacity-100"
-              >
-                {speakOn ? "🔊" : "🔈"}
-              </button>
-            )}
+            <button
+              onClick={() => {
+                if (speakOn && typeof window !== "undefined") window.speechSynthesis?.cancel();
+                setSpeakOn((s) => !s);
+              }}
+              title={speakOn ? "Mute spoken replies" : "Read replies aloud"}
+              className="text-base leading-none opacity-80 hover:opacity-100"
+            >
+              {speakOn ? "🔊" : "🔈"}
+            </button>
           </div>
 
           <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto p-3">
@@ -190,23 +193,22 @@ export function AssistantWidget() {
           </div>
 
           <div className="flex items-center gap-2 border-t border-gray-200 p-2">
-            {sttSupported && (
-              <button
-                onClick={toggleListening}
-                disabled={busy}
-                title={listening ? "Stop" : "Speak"}
-                className={`flex h-9 w-9 flex-none items-center justify-center rounded-md text-base disabled:opacity-50 ${
-                  listening ? "bg-red-500 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                }`}
-              >
-                🎤
-              </button>
-            )}
+            <button
+              onClick={toggleListening}
+              disabled={busy}
+              title={listening ? "Stop listening" : "Speak to the assistant"}
+              aria-label="Voice input"
+              className={`flex h-10 w-10 flex-none items-center justify-center rounded-md text-lg disabled:opacity-50 ${
+                listening ? "animate-pulse bg-red-500 text-white" : "bg-[#15212d] text-[#f5a623] hover:bg-[#1d2c3b]"
+              }`}
+            >
+              🎤
+            </button>
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && send()}
-              placeholder={listening ? "Listening…" : "Type, or tap the mic"}
+              placeholder={listening ? "Listening…" : "Type, or tap 🎤"}
               className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-[#15212d] focus:outline-none"
               disabled={busy}
             />

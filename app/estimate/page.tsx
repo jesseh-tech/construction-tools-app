@@ -200,7 +200,8 @@ export default function EstimatePage() {
         </div>
 
         {/* table panel */}
-        <div style={{ background: "#fff", border: "1px solid #d6d3cb" }}>
+        <div className="xscroll">
+        <div style={{ background: "#fff", border: "1px solid #d6d3cb", minWidth: 1010 }}>
           <div style={{ position: "sticky", top: 74, zIndex: 40, display: "flex", alignItems: "stretch", height: 50, background: "#15212d", color: "#9aa6b2", textTransform: "uppercase" }}>
             <div style={{ flex: 1, minWidth: 240, display: "flex", alignItems: "center", paddingLeft: 16, fontFamily: "'Barlow Condensed'", fontWeight: 700, fontSize: 11, letterSpacing: "0.13em" }}>Division / Line Item</div>
             <div style={{ width: 76, flex: "none", display: "flex", alignItems: "center", justifyContent: "flex-end", padding: "0 12px", fontFamily: "'Barlow Condensed'", fontWeight: 700, fontSize: 11, letterSpacing: "0.1em", borderLeft: "1px solid rgba(255,255,255,0.06)" }}>Qty</div>
@@ -284,6 +285,7 @@ export default function EstimatePage() {
             <div style={{ width: 150, flex: "none", borderLeft: "1px solid rgba(255,255,255,0.08)", display: "flex", alignItems: "center", justifyContent: "flex-end", padding: "0 14px", fontFamily: "'JetBrains Mono'", fontWeight: 700, fontSize: 16, color: ACCENT }}>{money(c.direct)}</div>
             <div style={{ width: 44, flex: "none" }} />
           </div>
+        </div>
         </div>
 
         {/* BID BUILD-UP + TOTAL */}

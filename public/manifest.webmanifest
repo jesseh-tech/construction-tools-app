@@ -1,0 +1,14 @@
+{
+  "name": "10 Cent Construction Tools",
+  "short_name": "10 Cent Tools",
+  "description": "Construction estimating and project tools with a built-in AI assistant.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#15212d",
+  "theme_color": "#15212d",
+  "icons": [
+    { "src": "/brand/10cent-icon.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/brand/10cent-icon.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

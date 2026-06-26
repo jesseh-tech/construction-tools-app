@@ -4,9 +4,19 @@
   box-sizing: border-box;
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
   margin: 0;
   font-family: "Barlow", Arial, Helvetica, sans-serif;
+}
+
+/* Wide tables become horizontally swipeable on small screens */
+.xscroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 ::selection {

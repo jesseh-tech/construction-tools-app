@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ProjectProvider } from "./ProjectProvider";
@@ -17,6 +17,15 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "10 Cent Construction Tools",
   description: "Construction-industry tools with a built-in AI assistant.",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "10 Cent Tools" },
+  icons: { icon: "/brand/10cent-icon.png", apple: "/brand/10cent-icon.png" },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: "#15212d",
 };
 
 export default function RootLayout({
