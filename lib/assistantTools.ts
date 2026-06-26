@@ -2,7 +2,7 @@
 // executor that applies a tool call and returns the new job.
 import type Anthropic from "@anthropic-ai/sdk";
 import { randomUUID } from "node:crypto";
-import { type Job, type Division, type LineItem, UNITS, CSI_CATALOG, csiName } from "./store";
+import { type Job, type Division, type LineItem, type TrackItem, UNITS, CSI_CATALOG, csiName } from "./store";
 
 const unitList = UNITS.join(", ");
 const csiList = CSI_CATALOG.map(([c, name]) => `${c} ${name}`).join("; ");
@@ -100,6 +100,66 @@ export const tools: Anthropic.Tool[] = [
         date: { type: "string", description: "ISO date YYYY-MM-DD; optional." },
       },
       required: ["description", "amount"],
+    },
+  },
+  {
+    name: "set_division_pct",
+    description: "Set a division's percent-complete for billing (drives the Schedule of Values and Pay Application). 0–100.",
+    input_schema: {
+      type: "object",
+      properties: { division_code: { type: "string", description: "Two-digit CSI code." }, percent: { type: "number" } },
+      required: ["division_code", "percent"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "set_retainage",
+    description: "Set the retainage percentage withheld on each draw (Schedule of Values + Pay Application).",
+    input_schema: {
+      type: "object",
+      properties: { percent: { type: "number" } },
+      required: ["percent"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "add_tracking_item",
+    description: "Log a new submittal or RFI. A reference number is assigned automatically.",
+    input_schema: {
+      type: "object",
+      properties: {
+        kind: { type: "string", enum: ["submittal", "rfi"] },
+        title: { type: "string", description: "Submittal description or RFI question." },
+        court: { type: "string", enum: ["GC", "Architect", "Owner", "Engineer", "Sub"], description: "Ball in court; defaults to GC." },
+        due: { type: "string", description: "Due date YYYY-MM-DD; optional." },
+        status: { type: "string", description: "Optional status; defaults to Draft (submittal) or Open (RFI)." },
+      },
+      required: ["kind", "title"],
+    },
+  },
+  {
+    name: "update_tracking_item",
+    description: "Update a submittal or RFI by its reference number (e.g. SUB-002, RFI-001) — change status, ball-in-court, due date, or title.",
+    input_schema: {
+      type: "object",
+      properties: {
+        ref_no: { type: "string" },
+        status: { type: "string" },
+        court: { type: "string", enum: ["GC", "Architect", "Owner", "Engineer", "Sub"] },
+        due: { type: "string" },
+        title: { type: "string" },
+      },
+      required: ["ref_no"],
+    },
+  },
+  {
+    name: "remove_tracking_item",
+    description: "Remove a submittal or RFI by its reference number.",
+    input_schema: {
+      type: "object",
+      properties: { ref_no: { type: "string" } },
+      required: ["ref_no"],
+      additionalProperties: false,
     },
   },
 ];
@@ -217,6 +277,54 @@ export function applyToolUse(job: Job, name: string, input: ToolInput): { job: J
         amount: num(input.amount),
       });
       return { job: j, result: `Logged change order for ${str(input.description)}.` };
+    }
+    case "set_division_pct": {
+      const code = str(input.division_code);
+      const div = j.divisions.find((d) => d.code === code);
+      if (!div) return { job: j, result: `No division with code ${code}.` };
+      const pct = Math.max(0, Math.min(100, num(input.percent)));
+      j.billing.pct = { ...j.billing.pct, [div.id]: pct };
+      return { job: j, result: `Set Div ${code} ${div.name} to ${pct}% complete.` };
+    }
+    case "set_retainage": {
+      j.billing.retainage = num(input.percent, j.billing.retainage);
+      return { job: j, result: `Set retainage to ${j.billing.retainage}%.` };
+    }
+    case "add_tracking_item": {
+      const isSub = str(input.kind) === "submittal";
+      const list = isSub ? j.submittals : j.rfis;
+      const prefix = isSub ? "SUB-" : "RFI-";
+      const item: TrackItem = {
+        id: randomUUID(),
+        refNo: `${prefix}${String(list.length + 1).padStart(3, "0")}`,
+        title: str(input.title),
+        court: str(input.court, "GC"),
+        due: str(input.due),
+        status: str(input.status) || (isSub ? "Draft" : "Open"),
+      };
+      if (isSub) j.submittals = [...j.submittals, item];
+      else j.rfis = [...j.rfis, item];
+      return { job: j, result: `Logged ${item.refNo}: ${item.title}` };
+    }
+    case "update_tracking_item": {
+      const ref = str(input.ref_no);
+      const patch: Partial<TrackItem> = {};
+      if (input.status !== undefined) patch.status = str(input.status);
+      if (input.court !== undefined) patch.court = str(input.court);
+      if (input.due !== undefined) patch.due = str(input.due);
+      if (input.title !== undefined) patch.title = str(input.title);
+      const apply = (arr: TrackItem[]) => arr.map((x) => (x.refNo === ref ? { ...x, ...patch } : x));
+      if (j.submittals.some((x) => x.refNo === ref)) j.submittals = apply(j.submittals);
+      else if (j.rfis.some((x) => x.refNo === ref)) j.rfis = apply(j.rfis);
+      else return { job: j, result: `No submittal or RFI ${ref}.` };
+      return { job: j, result: `Updated ${ref}.` };
+    }
+    case "remove_tracking_item": {
+      const ref = str(input.ref_no);
+      const before = j.submittals.length + j.rfis.length;
+      j.submittals = j.submittals.filter((x) => x.refNo !== ref);
+      j.rfis = j.rfis.filter((x) => x.refNo !== ref);
+      return { job: j, result: before === j.submittals.length + j.rfis.length ? `No item ${ref}.` : `Removed ${ref}.` };
     }
     default:
       return { job: j, result: `Unknown tool: ${name}.` };
