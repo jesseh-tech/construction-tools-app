@@ -68,6 +68,10 @@ export type ActionItem = { id: string; text: string; owner: string; done: boolea
 export type Meeting = { id: string; title: string; date: string; attendees: string; notes: string; actions: ActionItem[] };
 export type Milestone = { id: string; title: string; start: string; end: string; status: "Not Started" | "In Progress" | "Complete"; phase: string };
 
+export type BudgetLine = { code: string; committed: number; actual: number };
+export type Timecard = { id: string; date: string; worker: string; company: string; costCode: string; hours: string };
+export type Transmittal = { id: string; number: string; date: string; to: string; subject: string; via: "Email" | "Hand" | "Courier" | "Mail" | "Upload"; status: "Sent" | "Received" };
+
 export type Job = {
   meta: Meta;
   markups: Markups;
@@ -89,6 +93,9 @@ export type Job = {
   incidents: Incident[];
   meetings: Meeting[];
   milestones: Milestone[];
+  budget: BudgetLine[];
+  timesheets: Timecard[];
+  transmittals: Transmittal[];
 };
 
 export const proposalDefaults = (): Proposal => ({
@@ -199,6 +206,9 @@ export const APPS: AppEntry[] = [
   { id: "meetings", route: "/meetings", no: "17", name: "Meetings", tag: "PROJECT CONTROLS", active: true, desc: "Meeting minutes with attendees, notes and action items.", feeds: "Coordination" },
   { id: "schedule", route: "/schedule", no: "18", name: "Schedule", tag: "PROJECT CONTROLS", active: true, desc: "Project milestones and phases on a visual timeline.", feeds: "Timeline" },
   { id: "photos", route: "/photos", no: "19", name: "Photos", tag: "FIELD", active: true, desc: "Field photo gallery with captions and locations.", feeds: "Field" },
+  { id: "budget", route: "/budget", no: "20", name: "Budget vs Actual", tag: "PROJECT CONTROLS", active: true, desc: "Budget, committed and actual cost by division with variance.", feeds: "Financials" },
+  { id: "timesheets", route: "/timesheets", no: "21", name: "Timesheets", tag: "FIELD", active: true, desc: "Labor hours by worker, cost code and day.", feeds: "Field" },
+  { id: "transmittals", route: "/transmittals", no: "22", name: "Transmittals", tag: "PROJECT CONTROLS", active: true, desc: "Log of documents and drawings sent out.", feeds: "Coordination" },
 ];
 
 // ---- math ----
@@ -427,6 +437,19 @@ export function seedJob(): Job {
       { id: newId(), title: "Drywall & finishes", start: "2026-06-11", end: "2026-07-20", status: "In Progress", phase: "Construction" },
       { id: newId(), title: "Substantial completion", start: "2026-08-15", end: "2026-08-15", status: "Not Started", phase: "Closeout" },
     ],
+    budget: [
+      { code: "03", committed: 41000, actual: 28500 },
+      { code: "09", committed: 96000, actual: 52000 },
+      { code: "26", committed: 78000, actual: 31000 },
+    ],
+    timesheets: [
+      { id: newId(), date: "2026-06-24", worker: "Mike Alvarez", company: "10 Cent — Carpentry", costCode: "06-Carpentry", hours: "8" },
+      { id: newId(), date: "2026-06-24", worker: "Dana Reed", company: "10 Cent — Carpentry", costCode: "06-Carpentry", hours: "8" },
+      { id: newId(), date: "2026-06-24", worker: "Front Range crew (6)", company: "Front Range Drywall", costCode: "09-Drywall", hours: "48" },
+    ],
+    transmittals: [
+      { id: newId(), number: "TR-001", date: "2026-06-20", to: "Summit Interiors", subject: "Approved finish schedule + door hardware cut sheets", via: "Email", status: "Sent" },
+    ],
   };
 }
 
@@ -464,6 +487,9 @@ export function normalizeJob(input: unknown): Job {
     incidents: arr(j.incidents, []),
     meetings: arr(j.meetings, []),
     milestones: arr(j.milestones, []),
+    budget: arr(j.budget, []),
+    timesheets: arr(j.timesheets, []),
+    transmittals: arr(j.transmittals, []),
   };
 }
 
@@ -490,5 +516,8 @@ export function blankJob(): Job {
     incidents: [],
     meetings: [],
     milestones: [],
+    budget: [],
+    timesheets: [],
+    transmittals: [],
   };
 }

@@ -2,7 +2,7 @@
 // executor that applies a tool call and returns the new job.
 import type Anthropic from "@anthropic-ai/sdk";
 import { randomUUID } from "node:crypto";
-import { type Job, type Division, type LineItem, type TrackItem, type DailyReport, type Crew, type Proposal, type PunchItem, type Contact, type Commitment, type Inspection, type ChecklistItem, type Task, type Observation, type Incident, type Meeting, type ActionItem, type Milestone, UNITS, CSI_CATALOG, csiName, bidLevelingDefaults } from "./store";
+import { type Job, type Division, type LineItem, type TrackItem, type DailyReport, type Crew, type Proposal, type PunchItem, type Contact, type Commitment, type Inspection, type ChecklistItem, type Task, type Observation, type Incident, type Meeting, type ActionItem, type Milestone, type Timecard, type Transmittal, UNITS, CSI_CATALOG, csiName, bidLevelingDefaults } from "./store";
 
 const unitList = UNITS.join(", ");
 const csiList = CSI_CATALOG.map(([c, name]) => `${c} ${name}`).join("; ");
@@ -379,6 +379,48 @@ export const tools: Anthropic.Tool[] = [
       required: ["title"],
     },
   },
+  {
+    name: "add_timecard",
+    description: "Log a labor timecard — hours worked by a worker/crew on a given day and cost code.",
+    input_schema: {
+      type: "object",
+      properties: {
+        worker: { type: "string", description: "Worker or crew name." },
+        company: { type: "string" },
+        costCode: { type: "string", description: "Cost code or trade, e.g. '09-Drywall'." },
+        hours: { type: "string", description: "Total hours." },
+        date: { type: "string", description: "YYYY-MM-DD; defaults to today." },
+      },
+      required: ["worker", "hours"],
+    },
+  },
+  {
+    name: "add_transmittal",
+    description: "Log a transmittal — a record of documents/drawings sent to a party. A number is assigned automatically.",
+    input_schema: {
+      type: "object",
+      properties: {
+        to: { type: "string", description: "Recipient." },
+        subject: { type: "string", description: "What was sent." },
+        via: { type: "string", enum: ["Email", "Hand", "Courier", "Mail", "Upload"] },
+        date: { type: "string", description: "YYYY-MM-DD; defaults to today." },
+      },
+      required: ["to", "subject"],
+    },
+  },
+  {
+    name: "set_budget_actual",
+    description: "Set the committed and/or actual cost-to-date for a CSI division budget line, by division code (e.g. '09'). Budget itself is derived from the estimate.",
+    input_schema: {
+      type: "object",
+      properties: {
+        code: { type: "string", description: "CSI division code, e.g. '09'." },
+        committed: { type: "number", description: "Committed cost (subcontracts/POs)." },
+        actual: { type: "number", description: "Actual cost incurred to date." },
+      },
+      required: ["code"],
+    },
+  },
 ];
 
 type ToolInput = Record<string, unknown>;
@@ -410,6 +452,9 @@ function clone(job: Job): Job {
     incidents: [...job.incidents],
     meetings: [...job.meetings],
     milestones: [...job.milestones],
+    budget: [...job.budget],
+    timesheets: [...job.timesheets],
+    transmittals: [...job.transmittals],
   };
 }
 
@@ -734,6 +779,43 @@ export function applyToolUse(job: Job, name: string, input: ToolInput): { job: J
       };
       j.milestones = [...j.milestones, ms];
       return { job: j, result: `Added milestone "${ms.title}".` };
+    }
+    case "add_timecard": {
+      const tc: Timecard = {
+        id: randomUUID(),
+        date: str(input.date) || new Date().toISOString().slice(0, 10),
+        worker: str(input.worker),
+        company: str(input.company),
+        costCode: str(input.costCode),
+        hours: str(input.hours, "0"),
+      };
+      j.timesheets = [tc, ...j.timesheets];
+      return { job: j, result: `Logged ${tc.hours} hrs for ${tc.worker || "crew"}.` };
+    }
+    case "add_transmittal": {
+      const via = ["Email", "Hand", "Courier", "Mail", "Upload"].includes(str(input.via)) ? str(input.via) : "Email";
+      const tr: Transmittal = {
+        id: randomUUID(),
+        number: `TR-${String(j.transmittals.length + 1).padStart(3, "0")}`,
+        date: str(input.date) || new Date().toISOString().slice(0, 10),
+        to: str(input.to),
+        subject: str(input.subject),
+        via: via as Transmittal["via"],
+        status: "Sent",
+      };
+      j.transmittals = [tr, ...j.transmittals];
+      return { job: j, result: `Logged ${tr.number} to ${tr.to}.` };
+    }
+    case "set_budget_actual": {
+      const code = str(input.code);
+      if (!code) return { job: j, result: "Provide a division code (e.g. '09')." };
+      const existing = j.budget.find((b) => b.code === code);
+      const committed = input.committed !== undefined ? num(input.committed) : existing?.committed ?? 0;
+      const actual = input.actual !== undefined ? num(input.actual) : existing?.actual ?? 0;
+      j.budget = existing
+        ? j.budget.map((b) => (b.code === code ? { code, committed, actual } : b))
+        : [...j.budget, { code, committed, actual }];
+      return { job: j, result: `Updated budget line for division ${code} (committed ${committed}, actual ${actual}).` };
     }
     default:
       return { job: j, result: `Unknown tool: ${name}.` };

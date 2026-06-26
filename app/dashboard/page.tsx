@@ -60,6 +60,9 @@ export default function DashboardPage() {
     if (app.id === "incidents") return { stat: String(job.incidents.length), label: "INCIDENTS" };
     if (app.id === "meetings") return { stat: String(job.meetings.reduce((a, m) => a + m.actions.filter((x) => !x.done).length, 0)), label: "OPEN ACTIONS" };
     if (app.id === "schedule") return { stat: `${job.milestones.filter((m) => m.status === "Complete").length}/${job.milestones.length}`, label: "MILESTONES" };
+    if (app.id === "budget") return { stat: money0(job.budget.reduce((a, b) => a + b.actual, 0)), label: "ACTUAL SPENT" };
+    if (app.id === "timesheets") return { stat: String(job.timesheets.reduce((a, t) => a + (parseFloat(t.hours) || 0), 0)), label: "LABOR HRS" };
+    if (app.id === "transmittals") return { stat: String(job.transmittals.length), label: "LOGGED" };
     return { stat: app.active ? "READY" : "SOON", label: "STATUS" };
   };
 
@@ -210,8 +213,8 @@ export default function DashboardPage() {
         })()}
 
         <Section title="Preconstruction" sub="ESTIMATE · SOV · PROPOSAL · LEVELING · TAKEOFF" phase="PRECONSTRUCTION" />
-        <Section title="Project Controls" sub="CHANGE ORDERS · PAY APP · SUBMITTALS · TASKS · MEETINGS · SCHEDULE" phase="PROJECT CONTROLS" />
-        <Section title="Field" sub="DAILY REPORTS · PHOTOS" phase="FIELD" />
+        <Section title="Project Controls" sub="BUDGET · CHANGE ORDERS · PAY APP · SUBMITTALS · TASKS · MEETINGS · SCHEDULE · TRANSMITTALS" phase="PROJECT CONTROLS" />
+        <Section title="Field" sub="DAILY REPORTS · TIMESHEETS · PHOTOS" phase="FIELD" />
         <Section title="Quality & Closeout" sub="PUNCH LIST · INSPECTIONS · OBSERVATIONS · INCIDENTS" phase="QUALITY & CLOSEOUT" />
 
         {/* project documents */}
